@@ -20,6 +20,9 @@
 
 (>def> >item> (lambda (stream) (values (read-char stream) t stream)))
 
+(>def> >peek> (lambda (stream) (values (peek-char stream) t stream)))
+
+
 (defmacro >>if ((var parser stream) then else)
   (let ((ok? (gensym))
         (stream2 (gensym)))
@@ -30,6 +33,15 @@
 
 (defmacro >>when ((var parser stream) form)
   `(>>if (,var ,parser ,stream) ,form >fail>))
+
+(defun >>rewinding (parser)
+  (lambda (s)
+    (let ((s (replay-on s)))
+      (>>if (res parsers)
+            (lambda (s)
+              (funcall (>>result res) (recover-source s)))
+            (lambda (s)
+              (funcall >fail> (rewind s)))))))
 
 (defun >>bind (p f)
   (lambda (stream)
@@ -54,7 +66,6 @@
 (defun >>cons (x p)
   (>>map (lambda (xs) (cons x xs)) p))
 
-
 ;; succeeds with (x) even if p fails, otherwise (cons x result-of-p)
 (defun >>cons? (x p)
   (lambda (s)
@@ -65,29 +76,50 @@
 (defun >>many (p)
   (>>bind p (lambda (x) (>>cons? x (>>many p)))))
 
+(defun >>many1 (p)
+  (>>bind p (lambda (x) (>>cons x (>>many p)))))
+
 (defun >>sat (pred)
   (>>bind >item>
        (lambda (c) (if (funcall pred c)
                        (>>result c)
                        >fail>))))
 
+(defun >>peek-sat (pred)
+  (>>bind >peek>
+          (lambda (c) (if (funcall pred c)
+                          >item>
+                          >fail>))))
+
 (defun >>char (c)
   (>>sat (lambda (x) (char-equal x c))))
 
+(defun >>peek-char (c)
+  (>>peek-sat (lambda (x) (char-equal x c))))
+
 (defun >>string (str)
   (>>map (lambda (ignore) str)
-         (apply #'>>and (loop for c across str collect (>>char c)))))
+         (apply #'>>and (loop for c across str collect (>>peek-char c)))))
 
 (>def> >uppercase> (>>sat #'upper-case-p))
 (>def> >lowercase> (>>sat #'lower-case-p))
 (>def> >alphanum> (>>sat #'alphanumericp))
 (>def> >letter> (>>sat #'alpha-char-p))
+(>def> >space> (>>char #\Space))
+(>def> >spaces> (>>many1 >space>))
+(>def> >newline> (>>char #\Newline))
 
 (defun digit-p (c)
   (and (alphanumericp c)
        (not (alpha-char-p c))))
 
 (>def> >digit> (>>sat #'digit-p))
+
+(defun read-from-char-list (l)
+  (read-from-string (concatenate 'string l)))
+
+(>def> >nat> (>>map #'read-from-char-list (>>many1 >digit>)))
+
 
 (defun >>plus (p1 p2)
   (lambda (stream)
@@ -98,13 +130,31 @@
               (rewind s)
               (funcall p2 s))))))
 
+(defun >>? (p)
+  (>>plus p (>>result '())))
+
+(>def> >int>
+       (>>bind (>>? (>>char #\-))
+               (lambda (neg?)
+                 (>>map (lambda (num) (if neg? (* -1 num) num))
+                        >nat>))))
+
+(>def> >real>
+       (>>bind (>>many1 >digit>)
+               (lambda (whole-digits)
+                 (>>map (lambda (frac-digits)
+                          (read-from-char-list (append whole-digits frac-digit)))
+                        (>>? (>>and (>>char #\.)
+                                    (>>cons #\. (>>many1 >digit>))))))))
+
 (defun >>or (p1 p2 &rest ps)
   (if ps
       (>>plus p1 (apply #'>>or (cons p2 ps)))
       (>>plus p1 p2)))
 
 
-(>def> >space> (>>char #\Space))
-(>def> >spaces> (>>many >space>))
-(>def> >newline> (>>char #\Newline))
-
+(defun >>sep-by (val-p sep-p)
+  (>>bind val-p
+          (lambda (val)
+            (>>and sep-p
+                   (>>cons? val (>>sep-by val-p sep-p))))))
