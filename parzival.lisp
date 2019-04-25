@@ -5,10 +5,10 @@
 
 ;;; forms with names beginning with << will RETURN A PARSER
 ;;; and forms beginning and ending in a > ARE A PARSER
-;;; e.g. <<foo returns a parser while >goo> is a parser
+;;; e.g. <<foo returns a parser while <goo< is a parser
 
 
-(defmacro >def> (name parser &optional docstring)
+(defmacro <def< (name parser &optional docstring)
   `(progn
      (defvar ,name ,parser)
      (defun ,name (stream) ,docstring (funcall ,name stream))))
@@ -17,15 +17,15 @@
   (lambda (stream) (values x t stream)))
 
 
-(>def> >fail>
+(<def< <fail<
        (lambda (stream) (values nil nil stream))
        "Consumes nothing from input and fails the parse.")
 
-(>def> >item>
+(<def< <item<
        (lambda (stream) (values (read-char stream) t stream))
        "Consumes exactly one item from input and results in that item.")
 
-(>def> >peek>
+(<def< <peek<
        (lambda (stream) (values (peek-char stream) t stream))
        "Results in next item from the input without consuming it.")
 
@@ -41,7 +41,7 @@
 
 (defmacro <<when ((var parser stream) form)
   "Binds the result of parser on stream to var and runs the form. Fails otherwise."
-  `(<<if (,var ,parser ,stream) ,form >fail>))
+  `(<<if (,var ,parser ,stream) ,form <fail<))
 
 (defun <<rewinding (parser)
   "Turns a parser into a rewinding parser. I.e. If the parse fails, the stream is rewound to its state from before the parse so that other parsers can continue from there."
@@ -51,7 +51,7 @@
             (lambda (s)
               (funcall (<<result res) (recover-source s)))
             (lambda (s)
-              (funcall >fail> (rewind s)))))))
+              (funcall <fail< (rewind s)))))))
 
 (defun <<bind (p f)
   "Performs a parse p and returns a new parser that results from applying f to the result of p. If p fails, then so does (<<bind p f)."
@@ -99,17 +99,17 @@
 
 (defun <<sat (pred)
   "(<<sat pred) is parser that reads one item from input and succeeds if (pred item) is true."
-  (<<bind >item>
+  (<<bind <item<
        (lambda (c) (if (funcall pred c)
                        (<<result c)
-                       >fail>))))
+                       <fail<))))
 
 (defun <<peek-sat (pred)
   "(<<peek-sat pred) is like (<<sat pred) but doesn't consume the item if (pred item) is false."
-  (<<bind >peek>
+  (<<bind <peek<
           (lambda (c) (if (funcall pred c)
-                          >item>
-                          >fail>))))
+                          <item<
+                          <fail<))))
 
 (defun <<char (c)
   "(<<char c) consumes an item from input and succeds if that item is exactly the character c."
@@ -129,24 +129,24 @@
 ;; 2. Should there be peek / nonnpeek versions of each of the utility parsers?
 
 
-(>def> >uppercase> (<<sat #'upper-case-p))
-(>def> >lowercase> (<<sat #'lower-case-p))
-(>def> >alphanum> (<<sat #'alphanumericp))
-(>def> >letter> (<<sat #'alpha-char-p))
-(>def> >space> (<<char #\Space))
-(>def> >spaces> (<<many1 >space>))
-(>def> >newline> (<<char #\Newline))
+(<def< <uppercase< (<<sat #'upper-case-p))
+(<def< <lowercase< (<<sat #'lower-case-p))
+(<def< <alphanum< (<<sat #'alphanumericp))
+(<def< <letter< (<<sat #'alpha-char-p))
+(<def< <space< (<<char #\Space))
+(<def< <spaces< (<<many1 <space<))
+(<def< <newline< (<<char #\Newline))
 
 (defun digit-p (c)
   (and (alphanumericp c)
        (not (alpha-char-p c))))
 
-(>def> >digit> (<<sat #'digit-p))
+(<def< <digit< (<<sat #'digit-p))
 
 (defun read-from-char-list (l)
   (read-from-string (concatenate 'string l)))
 
-(>def> >nat> (<<map #'read-from-char-list (<<many1 >digit>)))
+(<def< <nat< (<<map #'read-from-char-list (<<many1 <digit<)))
 
 
 (defun <<plus (p1 p2)
@@ -161,19 +161,19 @@
 (defun <<? (p)
   (<<plus p (<<result '())))
 
-(>def> >int>
+(<def< <int<
        (<<bind (<<? (<<char #\-))
                (lambda (neg?)
                  (<<map (lambda (num) (if neg? (* -1 num) num))
-                        >nat>))))
+                        <nat<))))
 
-(>def> >real>
-       (<<bind (<<many1 >digit>)
+(<def< <real<
+       (<<bind (<<many1 <digit<)
                (lambda (whole-digits)
                  (<<map (lambda (frac-digits)
                           (read-from-char-list (append whole-digits frac-digit)))
                         (<<? (<<and (<<char #\.)
-                                    (<<cons #\. (<<many1 >digit>))))))))
+                                    (<<cons #\. (<<many1 <digit<))))))))
 
 (defun <<or (p1 p2 &rest ps)
   (if ps
