@@ -2,36 +2,56 @@
 
 (in-package #:parzival)
 
+;;;; NAMING CONVENTIONS
+;;;;
+;;;; Forms with names beginning with << return parsers. Forms beginning
+;;;; and ending in a > are themselves parsers. E.g. <<foo returns a parser while <goo< is
+;;;; a parser. A ~ in the name indicates a "rewinding" parser that will safely
+;;;; rewind the input stream before failing. Finally, a ? at the end of a name
+;;;; indicates an "optional" parser, one that will either succeed or will result
+;;;; in NIL and will safely rewind the stack.
 
-;;; forms with names beginning with << will RETURN A PARSER
-;;; and forms beginning and ending in a > ARE A PARSER
-;;; e.g. <<foo returns a parser while <goo< is a parser
 
+;;; A private utility macro for defining a defvar and a defun at the same time,
+;;; intended for use in defining parsers as the result of other parsers, but
+;;; letting them be called like functions too if necessary.
 
-(defmacro <def< (name parser &optional docstring)
+(defmacro <<def (name parser &optional docstring)
   `(progn
      (defvar ,name ,parser)
      (defun ,name (stream) ,docstring (funcall ,name stream))))
 
+
+;;; The CORE PARSERS out of which all other parsers are built! A most solemn
+;;; section of code. Have you properly prepared yourself to read on?
+
 (defun <<result (x)
+  "Creates a parser that results in X, having consumed nothing on the input stream."
   (lambda (stream) (values x t stream)))
 
 
-(<def< <fail<
+(<<def <fail<
        (lambda (stream) (values nil nil stream))
        "Consumes nothing from input and fails the parse.")
 
-(<def< <item<
+
+(<<def <item<
        (lambda (stream) (values (read-char stream) t stream))
        "Consumes exactly one item from input and results in that item.")
 
-(<def< <peek<
+
+(<<def <~item<
        (lambda (stream) (values (peek-char stream) t stream))
        "Results in next item from the input without consuming it.")
 
 
+;;; The following two macros make defining combinators much nicer. Both let you
+;;; choose what to do with with the input stream based on the result of a a
+;;; previous parse.
+
 (defmacro <<if ((var parser stream) then else)
-  "Binds the result of the parser on the stream to var and runs the combinator in then. If the parse fials the combinator else is run instead."
+  "Binds the result of the parser on the stream to var and runs the combinator
+in then. If the parse fails the combinator else is run instead."
   (let ((ok? (gensym))
         (stream2 (gensym)))
     `(multiple-value-bind (,var ,ok? ,stream2) (funcall ,parser ,stream)
@@ -39,150 +59,244 @@
            (funcall ,then ,stream2)
            (funcall ,else ,stream2)))))
 
+
 (defmacro <<when ((var parser stream) form)
   "Binds the result of parser on stream to var and runs the form. Fails otherwise."
   `(<<if (,var ,parser ,stream) ,form <fail<))
 
-(defun <<rewinding (parser)
-  "Turns a parser into a rewinding parser. I.e. If the parse fails, the stream is rewound to its state from before the parse so that other parsers can continue from there."
-  (lambda (s)
-    (let ((s (replay-on s)))
-      (<<if (res parsers)
-            (lambda (s)
-              (funcall (<<result res) (recover-source s)))
-            (lambda (s)
-              (funcall <fail< (rewind s)))))))
 
-(defun <<bind (p f)
-  "Performs a parse p and returns a new parser that results from applying f to the result of p. If p fails, then so does (<<bind p f)."
-  (lambda (stream)
-    (<<when (result p stream)
-            (funcall f result))))
-
-(defun <<= (p f &rest fs)
-  "Just like bind but with a chain of functions. Each function accepts the result of the parse from the previous step and returns a new parser.  If any intermediate parser fails, the whole chain fails."
-  (if fs
-      (apply #'<<= (cons (<<bind p f) fs))
-      (<<bind p f)))
-
-(defun <<and (p1 p2 &rest ps)
-  "Just like <<= but where parse results are ignored.  I.e. Applies each parser in sequence, ignoring any intermediate results. The result (<<and p1 p2 ... pn) is the result of pn."
-  (if ps
-      (apply #'<<and (cons (<<bind p1 (lambda (ignore) p2)) ps))
-      (<<bind p1 (lambda (ignore) p2))))
-
-(defun <<map (f p)
-  "Turns a parser that results in  x into a parser that results in (funcall f  x)."
-  (lambda (s)
-    (<<when (val p s) (<<result (funcall f val)))))
-
-;; fails if p fails
-(defun <<cons (x p)
-  "If the parser p results in y then the parser (<<cons x p) results in (cons x y). If p fails, then so does (<<cons x p)"
-  (<<map (lambda (xs) (cons x xs)) p))
-
-;; succeeds with (x) even if p fails, otherwise (cons x result-of-p)
-(defun <<cons? (x p)
-  "Just like <<cons except that (<<cons? x p) always succeeds. In the case of p failing, (<<cons? x p) results in (cons x nil)."
-  (lambda (s)
-    (<<if (val p s)
-          (<<result (cons x val))
-          (<<result (cons x nil)))))
-
-(defun <<many (p)
-  "Runs the parser p zero or more times, resulting in of list of parsed values."
-  (<<bind p (lambda (x) (<<cons? x (<<many p)))))
-
-(defun <<many1 (p)
-  "Like <<many but fails if p does not succeed at least once."
-  (<<bind p (lambda (x) (<<cons x (<<many p)))))
-
-(defun <<sat (pred)
-  "(<<sat pred) is parser that reads one item from input and succeeds if (pred item) is true."
-  (<<bind <item<
-       (lambda (c) (if (funcall pred c)
-                       (<<result c)
-                       <fail<))))
-
-(defun <<peek-sat (pred)
-  "(<<peek-sat pred) is like (<<sat pred) but doesn't consume the item if (pred item) is false."
-  (<<bind <peek<
-          (lambda (c) (if (funcall pred c)
-                          <item<
-                          <fail<))))
-
-(defun <<char (c)
-  "(<<char c) consumes an item from input and succeds if that item is exactly the character c."
-  (<<sat (lambda (x) (char-equal x c))))
-
-(defun <<peek-char (c)
-  "Like <<char but wont consume the input if the input is not equal to c."
-  (<<peek-sat (lambda (x) (char-equal x c))))
-
-(defun <<string (str)
-  "Parses exactly the string str, resulting in that str on success."
-  (<<map (lambda (ignore) str)
-         (apply #'<<and (loop for c across str collect (<<peek-char c)))))
-
-;; some notes/thoughts
-;; 1. <<many should take care to fail with the stream intact
-;; 2. Should there be peek / nonnpeek versions of each of the utility parsers?
-
-
-(<def< <uppercase< (<<sat #'upper-case-p))
-(<def< <lowercase< (<<sat #'lower-case-p))
-(<def< <alphanum< (<<sat #'alphanumericp))
-(<def< <letter< (<<sat #'alpha-char-p))
-(<def< <space< (<<char #\Space))
-(<def< <spaces< (<<many1 <space<))
-(<def< <newline< (<<char #\Newline))
-
-(defun digit-p (c)
-  (and (alphanumericp c)
-       (not (alpha-char-p c))))
-
-(<def< <digit< (<<sat #'digit-p))
-
-(defun read-from-char-list (l)
-  (read-from-string (concatenate 'string l)))
-
-(<def< <nat< (<<map #'read-from-char-list (<<many1 <digit<)))
-
+;;; The <<PLUS COMBINATOR is vital, and gives us amazing powers to choose our
+;;; own future!  This section defines <<plus and uses it to define some nice utilities.
 
 (defun <<plus (p1 p2)
+  "Introduces a choice between two parsers. If P1 succeeds then its result is
+used. If P1 fails then the stream is rewound and tried again with P2."
   (lambda (stream)
     (let ((stream (replay-on stream)))
       (<<if (result p1 stream)
-            (<<result result)
+            (lambda (s)
+              (funcall (<<result res) (recover-source s)))
             (lambda (s)
               (rewind s)
               (funcall p2 s))))))
 
-(defun <<? (p)
-  (<<plus p (<<result '())))
 
-(<def< <int<
-       (<<bind (<<? (<<char #\-))
-               (lambda (neg?)
-                 (<<map (lambda (num) (if neg? (* -1 num) num))
-                        <nat<))))
-
-(<def< <real<
-       (<<bind (<<many1 <digit<)
-               (lambda (whole-digits)
-                 (<<map (lambda (frac-digits)
-                          (read-from-char-list (append whole-digits frac-digit)))
-                        (<<? (<<and (<<char #\.)
-                                    (<<cons #\. (<<many1 <digit<))))))))
 
 (defun <<or (p1 p2 &rest ps)
+  "Tries each parser one after the other, rewinding the input stream after each
+failure, and resulting in the first successful parse."
   (if ps
       (<<plus p1 (apply #'<<or (cons p2 ps)))
       (<<plus p1 p2)))
 
 
+(defun <<~ (parser)
+  "Turns a parser into a rewinding parser. I.e. If the parser would fail input
+stream is first rewound before the fail occurrs."
+  (<<plus parser <fail<))
+
+
+(defun <<? (p)
+  "Makes a parser optional. I.e. if the parser P would fail, it instead succeeds
+  with NIL and the input stream is rewound."
+  (<<plus p (<<result nil)))
+
+
+(defmacro <<~def (name parser &optional docstring)
+  ;; a version of <<def that also makes rewinding parsers.
+  (let ((rewinding-name (concatenate 'string "<~" (subseq (string name) 1))))
+    `(progn
+       (<<def ,name ,parser ,docstring)
+       (<<def ,rewinding-name, (<<~ ,name)))))
+
+
+;;; <<BIND LETS US CHAIN PARSERS together in different ways. Fundamentally, the
+;;; <<bind combinator lets us use the result of one parse to create a new
+;;; parser. <<bind also propgates errors through these "chains of parsers",
+;;; letting us fail the first time any parser in the chain fails. The following
+;;; section defines <<bind and some utilities that derive from it.
+
+(defun <<bind (p f)
+  "Performs a parse P and returns a new parser that results from applying F to
+the result of P. If P fails, then so does (<<BIND P F)."
+  (lambda (stream)
+    (<<when (result p stream)
+            (funcall f result))))
+
+
+(defun <<= (p f &rest fs)
+  "Just like bind but with a chain of functions. Each function accepts the
+result of the parse from the previous step and returns a new parser. If any
+intermediate parser fails, the whole chain fails."
+  (if fs
+      (apply #'<<= (cons (<<bind p f) fs))
+      (<<bind p f)))
+
+
+(defun <<and (p1 p2 &rest ps)
+  "Just like <<= but where parse results are ignored. I.e. Applies each parser
+in sequence, ignoring any intermediate results. The result (<<AND P1 P2 ... PN)
+is the result of PN."
+  (if ps
+      (apply #'<<and (cons (<<bind p1 (lambda (ignore) p2)) ps))
+      (<<bind p1 (lambda (ignore) p2))))
+
+
+;;; PARSING INDIVIDUAL ITEMS from the stream. The basic parser thats of any real
+;;; use is <<sat. It lets you check that a stream item meets some kind of
+;;; condition, and fails to parse if it does not. The follwing section contains
+;;; a large number of utilities that parse one input item at a time.
+
+(defun <<sat (pred)
+  "(<<SAT PRED) is parser that reads one item from input and succeeds if
+(FUNCALL PRED ITEM) is true and fails otherwise."
+  (<<bind <item<
+          (lambda (c) (if (funcall pred c)
+                          (<<result c)
+                          <fail<))))
+
+
+(defun <<~sat (pred)
+  "(<<~SAT PRED) is like (<<SAT PRED) but doesn't consume the item if
+(FUNCALL PRED ITEM) is false."
+  (<<bind <~item<
+          (lambda (c) (if (funcall pred c)
+                          <item<
+                          <fail<))))
+
+
+(defmacro <<def-item-sat (name pred  &optional docstring)
+  ;; This is a less general version of <<~def, it is only to be used to define
+  ;; parsers that operate on a single character
+  (let ((rewinding-name (concatenate 'string "<~" (subseq (string name) 1))))
+    `(progn
+       (<<def ,name (<<sat ,pred) ,docstring)
+       (<<def ,rewinding-name (<<~sat ,pred) ,docstring))))
+
+
+(defun <<char (c)
+  "(<<CHAR C) consumes an item from input and succeeds if that item is exactly
+the character C."
+  (<<sat (lambda (x) (char-equal x c))))
+
+
+(defun <<~char (c)
+  "Like <<CHAR but wont consume the input if the input is not equal to C."
+  (<<~sat (lambda (x) (char-equal x c))))
+
+(<<def-item-sat <uppercase< #'upper-case-p
+                "Parses one uppercase alphabet letter.")
+
+
+(<<def-item-sat <lowercase< #'lower-case-p
+                "Parses one lowercase alphabet letter. ")
+
+
+(<<def-item-sat <alphanum< #'alphanumericp
+                "Parses an alphanumeric character.")
+
+
+(<<def-item-sat <letter< #'alpha-char-p
+                "Parses a single alphabetic character.")
+
+
+(<<def-item-sat <space<  (lambda (c) (char-equal x #\Space))
+                "Parses one space character.")
+
+
+(<<def-item-sat <newline< (lambda (c) (char-equal c #\Newline))
+                "Parses a single new line character.")
+
+
+(defun digit-p (c)
+  (and (alphanumericp c)
+       (not (alpha-char-p c))))
+
+
+(<<def-item-sat <digit< #'digit-p "Parses a single 0 - 9 digit character.")
+
+;;; <<MAP GIVES YOU NEW RESULTS FROM OLD PARSERS! This section contains a few
+;;; utilities built with <<map.
+
+(defun <<map (f p)
+  "Turns a parser that results in X into a parser that results in (FUNCALL F X)."
+  (lambda (s)
+    (<<when (val p s) (<<result (funcall f val)))))
+
+
+(defun <<cons (x p)
+  "If the parser P results in Y then the parser (<<CONS X P) results in
+(CONS X Y). If P fails, then so does (<<CONS X P)"
+  (<<map (lambda (xs) (cons x xs)) p))
+
+
+(defun <<cons? (x p)
+  "Like <<CONS except if the parser P fails, then the result is (CONS X NIL)"
+  (<<cons x (<<? p)))
+
+;;; PARSING SEQUENCES
+
+(defun <<* (p)
+  "Runs the parser P zero or more times, resulting in of list of parsed values."
+  (<<? (<<bind p (lambda (x) (<<cons x (<<* p))))))
+
+
+(defun <<+ (p)
+  "Like <<* but fails if P does not succeed at least once."
+  (<<bind p (lambda (x) (<<cons x (<<* p)))))
+
+
 (defun <<sep-by (val-p sep-p)
+  "Parses a sequence of values ignoring a seperator.
+E.g. (<<sep-by <digit< (<<char #\,)) would parse a string like '1,2,3,4' and
+result the list in a list (#\1 #\2 #\3 #\4)"
   (<<bind val-p
           (lambda (val)
             (<<and sep-p
                    (<<cons? val (<<sep-by val-p sep-p))))))
+
+
+;;; VALUE PARSERS. The following section contains utilities for parsing common
+;;; values like strings or numbers.
+
+(defun <<string (str)
+  "Parses exactly the string str, resulting in that str on success."
+  (<<map (lambda (ignore) str)
+         (apply #'<<and (loop for c across str collect (<<~char c)))))
+
+
+(defun <<~string (str)
+  "Parses exactly the string str, resulting in that str. Rewinding version."
+  (<<map (lambda (ignore) str)
+         (<<~ (apply #'<<and (loop for c across str collect (<<char c))))))
+
+
+(defun read-from-char-list (l)
+  (read-from-string (concatenate 'string l)))
+
+
+(<<~def <nat< (<<map #'read-from-char-list (<<many1 <digit<))
+        "Parses a natural number.")
+
+
+(<<~def <int<
+        (<<bind (<<? (<<char #\-))
+                (lambda (neg?)
+                  (<<map (lambda (num) (if neg? (* -1 num) num))
+                         <nat<)))
+        "Parses an integer")
+
+(<<~def <frac<
+        (<<bind (<<char #\.)
+                (lambda (dot)
+                  (<<map #'read-from-char-list
+                         (<<cons dot (<<many1 <digit<)))))
+        "Parses a number like .123")
+
+(<<~def <real<
+        (<<= (<<? (<<char #\-))
+             (lambda (neg) (if neg (<<map (lambda (x) (* -1 x)) <nat<) <nat<))
+             (lambda (whole) (<<map (lambda (frac) (+ frac whole)) <frac<)))
+        "Parses a number like 123.456")
+
+
