@@ -45,6 +45,16 @@
        "Results in next item from the input without consuming it.")
 
 
+(<<def <eof<
+       (lambda (stream)
+         (if (peek-char stream)
+             (values t t stream)
+             (values nil nil stream)))
+       "A parser that results in T if the end of the input stream has been
+reached, fails otherwise")
+
+
+
 ;;; The following two macros make defining combinators much nicer. Both let you
 ;;; choose what to do with with the input stream based on the result of a a
 ;;; previous parse.
@@ -124,17 +134,17 @@ the result of P. If P fails, then so does (<<BIND P F)."
             (funcall f result))))
 
 
-(defun <<= (p f &rest fs)
+(defun <<and-then (p f &rest fs)
   "Just like bind but with a chain of functions. Each function accepts the
 result of the parse from the previous step and returns a new parser. If any
 intermediate parser fails, the whole chain fails."
   (if fs
-      (apply #'<<= (cons (<<bind p f) fs))
+      (apply #'<<and-then (cons (<<bind p f) fs))
       (<<bind p f)))
 
 
 (defun <<and (p1 p2 &rest ps)
-  "Just like <<= but where parse results are ignored. I.e. Applies each parser
+  "Just like <<AND-THEN but where parse results are ignored. I.e. Applies each parser
 in sequence, ignoring any intermediate results. The result (<<AND P1 P2 ... PN)
 is the result of PN."
   (if ps
