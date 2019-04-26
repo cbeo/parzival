@@ -142,6 +142,8 @@ is the result of PN."
       (<<bind p1 (lambda (ignore) p2))))
 
 
+
+
 ;;; PARSING INDIVIDUAL ITEMS from the stream. The basic parser thats of any real
 ;;; use is <<sat. It lets you check that a stream item meets some kind of
 ;;; condition, and fails to parse if it does not. The follwing section contains
@@ -224,26 +226,48 @@ the character C."
     (<<when (val p s) (<<result (funcall f val)))))
 
 
-(defun <<cons (x p)
-  "If the parser P results in Y then the parser (<<CONS X P) results in
-(CONS X Y). If P fails, then so does (<<CONS X P)"
+(defun <<map-cons (x p)
+  "If the parser P results in Y then the parser (<<MAP-CONS X P) results in
+(CONS X Y). If P fails, then so does (<<MAP-CONS X P)"
   (<<map (lambda (xs) (cons x xs)) p))
 
 
-(defun <<cons? (x p)
-  "Like <<CONS except if the parser P fails, then the result is (CONS X NIL)"
-  (<<cons x (<<? p)))
+(defun <<map-cons? (x p)
+  "Like <<MAP-CONS except if the parser P fails, then the result is (CONS X NIL)"
+  (<<map-cons x (<<? p)))
 
 ;;; PARSING SEQUENCES
 
+(defun <<cons (hd tl)
+  "Returns a parser that conses the result of parsing head to the result of
+  parsing tail, fails if either fails"
+  (<<bind hd
+          (lambda (head)
+            (<<map (lambda (tail) (cons head tail)) tl))))
+
 (defun <<* (p)
   "Runs the parser P zero or more times, resulting in of list of parsed values."
-  (<<? (<<bind p (lambda (x) (<<cons x (<<* p))))))
+  (<<? (<<cons p (<<* p))))
 
 
 (defun <<+ (p)
   "Like <<* but fails if P does not succeed at least once."
-  (<<bind p (lambda (x) (<<cons x (<<* p)))))
+  (<<cons p (<<* p)))
+
+
+(defun <<times (n p)
+  (if (<= n 0) (<<result nil)
+      (<<cons p (<<times (1- n) p))))
+
+(defun <<min-times (n p)
+  (if (<= n 0) (<<* p)
+      (<<cons p (<<min-times (1- n) p))))
+
+(defun <<max-times (n p)
+  (let ((count 0))
+    (<<bind (<<* (<<map (lambda (r) (incf count) r) p))
+            (lambda (results) (if (> count n) <fail<
+                                  (<<result results))))))
 
 
 (defun <<sep-by (val-p sep-p)
@@ -252,8 +276,9 @@ E.g. (<<sep-by <digit< (<<char #\,)) would parse a string like '1,2,3,4' and
 result the list in a list (#\1 #\2 #\3 #\4)"
   (<<bind val-p
           (lambda (val)
-            (<<and sep-p
-                   (<<cons? val (<<sep-by val-p sep-p))))))
+            (<<or (<<and sep-p
+                         (<<map-cons? val (<<sep-by val-p sep-p)))
+                  (<<result (list val))))))
 
 
 ;;; VALUE PARSERS. The following section contains utilities for parsing common
@@ -275,7 +300,7 @@ result the list in a list (#\1 #\2 #\3 #\4)"
   (read-from-string (concatenate 'string l)))
 
 
-(<<~def <nat< (<<map #'read-from-char-list (<<many1 <digit<))
+(<<~def <nat< (<<map #'read-from-char-list (<<+ <digit<))
         "Parses a natural number.")
 
 
@@ -286,17 +311,5 @@ result the list in a list (#\1 #\2 #\3 #\4)"
                          <nat<)))
         "Parses an integer")
 
-(<<~def <frac<
-        (<<bind (<<char #\.)
-                (lambda (dot)
-                  (<<map #'read-from-char-list
-                         (<<cons dot (<<many1 <digit<)))))
-        "Parses a number like .123")
-
-(<<~def <real<
-        (<<= (<<? (<<char #\-))
-             (lambda (neg) (if neg (<<map (lambda (x) (* -1 x)) <nat<) <nat<))
-             (lambda (whole) (<<map (lambda (frac) (+ frac whole)) <frac<)))
-        "Parses a number like 123.456")
 
 
