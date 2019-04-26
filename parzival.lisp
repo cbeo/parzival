@@ -48,8 +48,8 @@
 (<<def <eof<
        (lambda (stream)
          (if (peek-char nil stream nil nil)
-             (values t t stream)
-             (values nil nil stream)))
+             (values nil nil stream)
+             (values t t stream)))
        "A parser that results in T if the end of the input stream has been
 reached, fails otherwise")
 
