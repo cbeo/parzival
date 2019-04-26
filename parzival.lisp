@@ -41,18 +41,17 @@
 
 
 (<<def <~item<
-       (lambda (stream) (values (peek-char stream) t stream))
+       (lambda (stream) (values (peek-char nil stream nil nil) t stream))
        "Results in next item from the input without consuming it.")
 
 
 (<<def <eof<
        (lambda (stream)
-         (if (peek-char stream)
+         (if (peek-char nil stream nil nil)
              (values t t stream)
              (values nil nil stream)))
        "A parser that results in T if the end of the input stream has been
 reached, fails otherwise")
-
 
 
 ;;; The following two macros make defining combinators much nicer. Both let you
@@ -83,7 +82,7 @@ in then. If the parse fails the combinator else is run instead."
 used. If P1 fails then the stream is rewound and tried again with P2."
   (lambda (stream)
     (let ((stream (replay-on stream)))
-      (<<if (result p1 stream)
+      (<<if (res p1 stream)
             (lambda (s)
               (funcall (<<result res) (recover-source s)))
             (lambda (s)
@@ -114,10 +113,10 @@ stream is first rewound before the fail occurrs."
 
 (defmacro <<~def (name parser &optional docstring)
   ;; a version of <<def that also makes rewinding parsers.
-  (let ((rewinding-name (concatenate 'string "<~" (subseq (string name) 1))))
+  (let ((rewinding-name (make-symbol (concatenate 'string "<~" (subseq (string name) 1)))))
     `(progn
        (<<def ,name ,parser ,docstring)
-       (<<def ,rewinding-name, (<<~ ,name)))))
+       (<<def ,rewinding-name (<<~ ,name) ,docstring))))
 
 
 ;;; <<BIND LETS US CHAIN PARSERS together in different ways. Fundamentally, the
@@ -160,8 +159,7 @@ is the result of PN."
 ;;; a large number of utilities that parse one input item at a time.
 
 (defun <<sat (pred)
-  "(<<SAT PRED) is parser that reads one item from input and succeeds if
-(FUNCALL PRED ITEM) is true and fails otherwise."
+  "(<<SAT PRED) is parser that reads one item from input and succeeds if (FUNCALL PRED ITEM) is true and fails otherwise."
   (<<bind <item<
           (lambda (c) (if (funcall pred c)
                           (<<result c)
@@ -169,8 +167,7 @@ is the result of PN."
 
 
 (defun <<~sat (pred)
-  "(<<~SAT PRED) is like (<<SAT PRED) but doesn't consume the item if
-(FUNCALL PRED ITEM) is false."
+  "(<<~SAT PRED) is like (<<SAT PRED) but doesn't consume the item if (FUNCALL PRED ITEM) is false."
   (<<bind <~item<
           (lambda (c) (if (funcall pred c)
                           <item<
@@ -180,7 +177,7 @@ is the result of PN."
 (defmacro <<def-item-sat (name pred  &optional docstring)
   ;; This is a less general version of <<~def, it is only to be used to define
   ;; parsers that operate on a single character
-  (let ((rewinding-name (concatenate 'string "<~" (subseq (string name) 1))))
+  (let ((rewinding-name (make-symbol (concatenate 'string "<~" (subseq (string name) 1)))))
     `(progn
        (<<def ,name (<<sat ,pred) ,docstring)
        (<<def ,rewinding-name (<<~sat ,pred) ,docstring))))
@@ -189,12 +186,21 @@ is the result of PN."
 (defun <<char (c)
   "(<<CHAR C) consumes an item from input and succeeds if that item is exactly
 the character C."
-  (<<sat (lambda (x) (char-equal x c))))
+  (<<sat (lambda (x) (eql x c))))
 
 
 (defun <<~char (c)
   "Like <<CHAR but wont consume the input if the input is not equal to C."
+  (<<~sat (lambda (x) (eql x c))))
+
+(defun <<char-equal (c)
+  "The case-insensitive version of <<CHAR."
+  (<<sat (lambda (x) (char-equal x c))))
+
+(defun <<char-equal (c)
+  "The case-insensitive version of <<CHAR."
   (<<~sat (lambda (x) (char-equal x c))))
+
 
 (<<def-item-sat <uppercase< #'upper-case-p
                 "Parses one uppercase alphabet letter.")
@@ -212,11 +218,11 @@ the character C."
                 "Parses a single alphabetic character.")
 
 
-(<<def-item-sat <space<  (lambda (c) (char-equal x #\Space))
+(<<def-item-sat <space<  (lambda (c) (eql c #\Space))
                 "Parses one space character.")
 
 
-(<<def-item-sat <newline< (lambda (c) (char-equal c #\Newline))
+(<<def-item-sat <newline< (lambda (c) (eql c #\Newline))
                 "Parses a single new line character.")
 
 
@@ -238,7 +244,7 @@ the character C."
 
 (defun <<map-cons (x p)
   "If the parser P results in Y then the parser (<<MAP-CONS X P) results in
-(CONS X Y). If P fails, then so does (<<MAP-CONS X P)"
+  (CONS X Y). If P fails, then so does (<<MAP-CONS X P)"
   (<<map (lambda (xs) (cons x xs)) p))
 
 
@@ -257,7 +263,12 @@ the character C."
 
 (defun <<* (p)
   "Runs the parser P zero or more times, resulting in of list of parsed values."
-  (<<? (<<cons p (<<* p))))
+  (<<bind (<<? p)
+          (lambda (val) (if val
+                            (<<map-cons val (<<* p))
+                            (<<result nil)))))
+
+  ;(<<? (<<cons p (<<* p))))
 
 
 (defun <<+ (p)
@@ -282,8 +293,8 @@ the character C."
 
 (defun <<sep-by (val-p sep-p)
   "Parses a sequence of values ignoring a seperator.
-E.g. (<<sep-by <digit< (<<char #\,)) would parse a string like '1,2,3,4' and
-result the list in a list (#\1 #\2 #\3 #\4)"
+  E.g. (<<sep-by <digit< (<<char #\,)) would parse a string like '1,2,3,4' and
+  result the list in a list (#\1 #\2 #\3 #\4)"
   (<<bind val-p
           (lambda (val)
             (<<or (<<and sep-p
@@ -305,6 +316,16 @@ result the list in a list (#\1 #\2 #\3 #\4)"
   (<<map (lambda (ignore) str)
          (<<~ (apply #'<<and (loop for c across str collect (<<char c))))))
 
+
+(defun <<to-string (parser)
+  "If the result of PARSER is a list of characters, transform it into a string.
+  Signals an error of the result X cannot be called in (concatenate 'string X)"
+  (<<map (lambda (result) (concatenate 'string result)) parser))
+
+
+(<<~def <word< (<<to-string (<<+ <alphanum<))
+        "Parses a sequence of one or more alphanumeric characters, resulting in
+        a string containing them.")
 
 (defun read-from-char-list (l)
   (read-from-string (concatenate 'string l)))
