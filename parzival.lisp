@@ -41,7 +41,10 @@
 
 
 (<<def <~item<
-       (lambda (stream) (values (peek-char nil stream nil nil) t stream))
+       (lambda (stream)
+         (if (peek-char nil stream nil nil)
+             (funcall <item< stream)
+             (funcall <fail< stream)))
        "Results in next item from the input without consuming it.")
 
 
@@ -170,7 +173,7 @@ is the result of PN."
   "(<<~SAT PRED) is like (<<SAT PRED) but doesn't consume the item if (FUNCALL PRED ITEM) is false."
   (<<bind <~item<
           (lambda (c) (if (funcall pred c)
-                          <item<
+                          (<<result c)
                           <fail<))))
 
 
