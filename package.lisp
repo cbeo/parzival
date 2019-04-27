@@ -3,10 +3,11 @@
 (defpackage #:parzival
   (:use #:cl #:replay-streams)
   (:export
+   #:parse
    #:<<result
    #:<fail<
+   #:<peek<
    #:<item<
-   #:<~item<
    #:<eof<
    #:<<if
    #:<<when
@@ -18,6 +19,7 @@
    #:<<bind
    #:<<and-then
    #:<<and
+   #:<<ending
    #:<<sat
    #:<<~sat
    #:<<char

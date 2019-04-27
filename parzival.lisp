@@ -11,6 +11,31 @@
 ;;;; indicates an "optional" parser, one that will either succeed or will result
 ;;;; in NIL and will safely rewind the stack.
 
+;;;; WHAT IS A PARSER?
+;;;;
+;;;; In parzival, a parser is a function that accepts an input stream and
+;;;; returns three values. The first value is the parse result, which can be any
+;;;; lisp value (numbers, lists, strings, anything your little heart desires).
+;;;; As a matter of terminology: if the first value is X, we say that the parser
+;;;; "results in X". The second value returned by a parser is T if the parse
+;;;; succeeded and is NIL if the parse failed. We return this second value so
+;;;; that parsers can meaningfully result in NIL but still be considered to have
+;;;; succeded. The third value is the stream which may have been transformed or
+;;;; altered in some way as a result of passing it to the parser. Mostly,
+;;;; however, you can ignore the second and third values returned by a parser.
+;;;; Parzival includes machinery (in the form of higher order functions and a
+;;;; few macros) to abstract the second and third values away. When you are
+;;;; building your own parsers you usually need only concentrate on the parse
+;;;; results.
+
+;;; The PARSE function. Runs parsers.
+
+(defun parse (stream parser &optional string-as-stream-p)
+  "Parse STREAM with PARSER. If STRING-AS-STREAM-P then STREAM can be a string."
+  (if string-as-stream-p
+      (funcall parser (make-string-input-stream stream))
+      (funcall parser stream)))
+
 
 ;;; A private utility macro for defining a defvar and a defun at the same time,
 ;;; intended for use in defining parsers as the result of other parsers, but
@@ -98,7 +123,7 @@ PARSER2."
 (defun <<or (parser1 parser2 &rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
 failure, and resulting in the first successful parse."
-  (if ps
+  (if parsers
       (<<plus parser1 (apply #'<<or (cons parser2 parsers)))
       (<<plus parser1 parser2)))
 
@@ -156,7 +181,7 @@ the input stream is first rewound before the fail occurrs."
       (<<bind parser1 (lambda (ignore) parser2))))
 
 
-(defun <<end (parser)
+(defun <<ending (parser)
   "Creates a parser that succeeds if PARSER succeeds and the end of the input has been reached."
   (<<bind parser
           (lambda (result)
@@ -204,6 +229,7 @@ the character C."
 (defun <<~char (c)
   "Like <<CHAR but wont consume the input if the input is not equal to C."
   (<<~sat (lambda (x) (eql x c))))
+
 
 (defun <<char-equal (c)
   "The case-insensitive version of <<CHAR."
@@ -257,12 +283,12 @@ the character C."
 (defun <<map-cons (x parser)
   "If the parser PARSER results in Y then the parser (<<MAP-CONS X PARSER) results in
   (CONS X Y). If PARSER fails, then so does (<<MAP-CONS X P)"
-  (<<map (lambda (xs) (cons x xs)) p))
+  (<<map (lambda (xs) (cons x xs)) parser))
 
 
 (defun <<map-cons? (x parser)
   "Like <<MAP-CONS except if the parser PARSER fails, then the result is (CONS X NIL)"
-  (<<map-cons x (<<? p)))
+  (<<map-cons x (<<? parser)))
 
 ;;; PARSING SEQUENCES
 
@@ -309,15 +335,16 @@ the character C."
                                   (<<result results))))))
 
 
-(defun <<sep-by (val-p sep-p)
-  "Parses a sequence of values with VAL-P ignoring a seperator that is parsed with SEP-P.
-  E.g. (<<SEP-BY <DIGIT< (<<CHAR #\,)) would parse a string like '1,2,3,4' and
-  result the list in a list (#\1 #\2 #\3 #\4)"
-  (<<bind val-p
+(defun <<sep-by (value-parser separator-parser)
+  "Parses a sequence of values with VALUE-PARSER ignoring a separator that is
+  parsed with SEPARATOR-PARSER. E.g. (<<SEP-BY <NAT< (<<CHAR #\,)) would parse
+  a string like '1,2,3,4' and result in a list (1 2 3 4)"
+  (<<bind value-parser
           (lambda (val)
-            (<<or (<<and sep-p
-                         (<<map-cons? val (<<sep-by val-p sep-p)))
+            (<<or (<<and separator-parser
+                         (<<map-cons val (<<sep-by value-parser separator-parser)))
                   (<<result (list val))))))
+
 
 
 ;;; VALUE PARSERS. The following section contains utilities for parsing common
