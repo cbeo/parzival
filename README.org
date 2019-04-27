@@ -2,3 +2,7 @@ _Work In Progress..._
 
 I'm still stabilizing the library. Eventually aims to be your go-to slick
 embeded language for writing stream parsers.
+
+* parzival
+
+  An errant knight, a holy fool, exploring the stream for the holy =<fail<=. 
