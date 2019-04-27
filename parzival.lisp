@@ -34,18 +34,18 @@
        (lambda (stream) (values nil nil stream))
        "Consumes nothing from input and fails the parse.")
 
+(<<def <peek<
+       (lambda (stream) (values (peek-char nil stream nil nil) t stream))
+       "A pseudo-parser that peeks at the next item without consuming it. Useful
+       for building efficient look-ahead of one item.")
+
 
 (<<def <item<
-       (lambda (stream) (values (read-char stream) t stream))
-       "Consumes exactly one item from input and results in that item.")
-
-
-(<<def <~item<
        (lambda (stream)
          (if (peek-char nil stream nil nil)
-             (funcall <item< stream)
+             (funcall (<<result (read-char stream)) stream)
              (funcall <fail< stream)))
-       "Results in next item from the input without consuming it.")
+       "Results in next item from the input stream, or fails.")
 
 
 (<<def <eof<
@@ -171,9 +171,9 @@ is the result of PN."
 
 (defun <<~sat (pred)
   "(<<~SAT PRED) is like (<<SAT PRED) but doesn't consume the item if (FUNCALL PRED ITEM) is false."
-  (<<bind <~item<
+  (<<bind <peek<
           (lambda (c) (if (funcall pred c)
-                          (<<result c)
+                          <item<
                           <fail<))))
 
 
