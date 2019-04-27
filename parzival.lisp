@@ -368,7 +368,7 @@ the character C."
   (<<map (lambda (result) (concatenate 'string result)) parser))
 
 
-(<<~def <word< (<<to-string (<<+ <alphanum<))
+(<<~def <word< (<<to-string (<<+ <letter<))
         "Parses a sequence of one or more alphanumeric characters, resulting in
         a string containing them.")
 

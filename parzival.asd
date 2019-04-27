@@ -6,6 +6,7 @@
   :license  "GPLv3"
   :version "0.0.1"
   :serial t
-  :depends-on (#:replay-streams)
+  :depends-on (#:replay-streams #:prove)
   :components ((:file "package")
-               (:file "parzival")))
+               (:file "parzival")
+               (:file "tests")))
