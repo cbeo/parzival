@@ -32,6 +32,8 @@
    #:<~lowercase<
    #:<alphanum<
    #:<~alphanum<
+   #:<letter<
+   #:<~letter<
    #:<space<
    #:<~space<
    #:<newline<
@@ -41,6 +43,10 @@
    #:<<map
    #:<<map-cons
    #:<<map-cons?
+   #:<<cons-map
+   #:<<list-map
+   #:<<map-list
+   #:<<map-append
    #:<<cons
    #:<<*
    #:<<+

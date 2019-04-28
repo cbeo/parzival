@@ -60,7 +60,10 @@
        "Consumes nothing from input and fails the parse.")
 
 (<<def <peek<
-       (lambda (stream) (values (peek-char nil stream nil nil) t stream))
+       (lambda (stream)
+         (if (peek-char nil stream nil nil)
+             (funcall (<<result (peek-char nil stream nil nil)) stream)
+             (funcall <fail< stream)))
        "A pseudo-parser that peeks at the next item without consuming it. Useful
        for building efficient look-ahead of one item.")
 
@@ -140,14 +143,6 @@ the input stream is first rewound before the fail occurrs."
   (<<plus parser (<<result nil)))
 
 
-(defmacro <<~def (name parser &optional docstring)
-  ;; a version of <<def that also makes rewinding parsers.
-  (let ((rewinding-name (make-symbol (concatenate 'string "<~" (subseq (string name) 1)))))
-    `(progn
-       (<<def ,name ,parser ,docstring)
-       (<<def ,rewinding-name (<<~ ,name) ,docstring))))
-
-
 ;;; <<BIND LETS US CHAIN PARSERS together in different ways. Fundamentally, the
 ;;; <<bind combinator lets us use the result of one parse to create a new
 ;;; parser. <<bind also propgates errors through these "chains of parsers",
@@ -214,10 +209,10 @@ the input stream is first rewound before the fail occurrs."
 (defmacro <<def-item-sat (name pred  &optional docstring)
   ;; This is a less general version of <<~def, it is only to be used to define
   ;; parsers that operate on a single character
-  (let ((rewinding-name (make-symbol (concatenate 'string "<~" (subseq (string name) 1)))))
+  (let ((peeking-version (intern (concatenate 'string "<~" (subseq (string name) 1)))))
     `(progn
        (<<def ,name (<<sat ,pred) ,docstring)
-       (<<def ,rewinding-name (<<~sat ,pred) ,docstring))))
+       (<<def ,peeking-version (<<~sat ,pred) ,docstring))))
 
 
 (defun <<char (c)
@@ -290,6 +285,22 @@ the character C."
   "Like <<MAP-CONS except if the parser PARSER fails, then the result is (CONS X NIL)"
   (<<map-cons x (<<? parser)))
 
+(defun <<cons-map (parser x)
+  "If PARSER results in Y, then (<<CONS-MAP PARSER X) results in (CONS Y X)"
+  (<<map (lambda (y) (cons y x)) parser))
+
+(defun <<map-list (x parser)
+  "If PARSER results in Y then (<<MAP-LIST X PARSER) results in (X Y)"
+  (<<map (lambda (y) (list x y)) parser))
+
+(defun <<list-map (parser x)
+  (<<map (lambda (y) (list y x)) parser))
+
+(defun <<map-append (xs parser)
+  "If PARSER results in YS, assumed to be list, then (<<MAP-APPEND XS PARSER) results in
+  (append XS YS)"
+  (<<map (lambda (ys) (append xs ys)) parser))
+
 ;;; PARSING SEQUENCES
 
 (defun <<cons (head-parser tail-parser)
@@ -298,6 +309,7 @@ the character C."
   (<<bind head-parser
           (lambda (head)
             (<<map (lambda (tail) (cons head tail)) tail-parser))))
+
 
 (defun <<* (parser)
   "Runs the parser PARSER zero or more times, resulting in of list of parsed values."
@@ -368,7 +380,7 @@ the character C."
   (<<map (lambda (result) (concatenate 'string result)) parser))
 
 
-(<<~def <word< (<<to-string (<<+ <letter<))
+(<<def <word< (<<to-string (<<+ <~letter<))
         "Parses a sequence of one or more alphanumeric characters, resulting in
         a string containing them.")
 
@@ -376,11 +388,11 @@ the character C."
   (read-from-string (concatenate 'string l)))
 
 
-(<<~def <nat< (<<map #'read-from-char-list (<<+ <digit<))
+(<<def <nat< (<<map #'read-from-char-list (<<+ <~digit<))
         "Parses a natural number.")
 
 
-(<<~def <int<
+(<<def <int<
         (<<bind (<<? (<<char #\-))
                 (lambda (neg?)
                   (<<map (lambda (num) (if neg? (* -1 num) num))
