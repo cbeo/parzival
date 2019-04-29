@@ -113,15 +113,15 @@ in then. If the parse fails the combinator else is run instead."
 is used. If PARSER1 fails then the stream is rewound and tried again with
 PARSER2."
   (lambda (stream)
-    (let ((stream (replay-on stream)))
-      (<<if (res parser1 stream)
-            (lambda (s)
-              (funcall (<<result res) (recover-source s)))
-            (lambda (s)
-              (rewind s)
-              (funcall parser2 s))))))
-
-
+    (let ((stream2 (replay-on stream)))
+      (<<if (result parser1 stream2)
+            (lambda (stream3)
+              (funcall (<<result result)
+                       (if (eq stream3 stream2)
+                           (recover-source stream2)
+                           stream3)))
+            (lambda (stream3)
+              (funcall parser2 (rewind stream2)))))))
 
 (defun <<or (parser1 parser2 &rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
@@ -180,9 +180,7 @@ the input stream is first rewound before the fail occurrs."
   "Creates a parser that succeeds if PARSER succeeds and the end of the input has been reached."
   (<<bind parser
           (lambda (result)
-            (lambda (stream)
-              (<<when (eof <eof< stream)
-                      (<<result result))))))
+            (<<map (lambda (ignore) result) <eof<))))
 
 
 ;;; PARSING INDIVIDUAL ITEMS from the stream. The basic parser thats of any real
@@ -191,7 +189,8 @@ the input stream is first rewound before the fail occurrs."
 ;;; a large number of utilities that parse one input item at a time.
 
 (defun <<sat (pred)
-  "(<<SAT PRED) is parser that reads one item from input and succeeds if (FUNCALL PRED ITEM) is true and fails otherwise."
+  "(<<SAT PRED) is parser that reads one item from input and succeeds
+  if (FUNCALL PRED ITEM) is true and fails otherwise."
   (<<bind <item<
           (lambda (c) (if (funcall pred c)
                           (<<result c)
@@ -313,10 +312,15 @@ the character C."
 
 (defun <<* (parser)
   "Runs the parser PARSER zero or more times, resulting in of list of parsed values."
-  (<<bind (<<? parser)
-          (lambda (val) (if val
-                            (<<map-cons val (<<* parser))
-                            (<<result nil)))))
+  (lambda (stream)
+    (<<if (result (<<~ parser) stream)
+          (<<map-cons result (<<* parser))
+          (<<result nil))))
+
+  ;; (<<bind (<<? parser)
+  ;;         (lambda (val) (if val
+  ;;                           (<<map-cons val (<<* parser))
+  ;;                           (<<result nil)))))
 
 
 (defun <<+ (parser)
@@ -380,8 +384,8 @@ the character C."
   (<<map (lambda (result) (concatenate 'string result)) parser))
 
 
-(<<def <word< (<<to-string (<<+ <~letter<))
-        "Parses a sequence of one or more alphanumeric characters, resulting in
+(<<def <word< (<<to-string (<<+ <letter<))
+        "Parses a sequence of one or more letters characters, resulting in
         a string containing them.")
 
 (defun read-from-char-list (l)
