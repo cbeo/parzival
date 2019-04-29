@@ -6,47 +6,73 @@
 
 (setf prove:*enable-colors* nil)
 
-(subtest "Testing <<result"
-  (ok (parse "" (<<result t) t))
-  (let* ((stream (make-string-input-stream "hey")))
-    (is (parse stream (<<result 'foo)) 'foo)
-    (is (read-char stream) #\h)))
+(defmacro test-with ((var input-string) &rest tests)
+  `(subtest (format nil "With the input ~s ..." ,input-string)
+     (let ((,var (make-string-input-stream ,input-string)))
+       ,@tests)))
 
-(subtest "Testing <peek<"
-  (let ((stream (make-string-input-stream "X")))
-    ;; showing that the input isn't being consumed
-    (is (parse stream <peek<) #\X)
-    (is (parse stream <peek<) #\X)))
+(defmacro results (stream expr val)
+  (let ((res (gensym))
+        (ok? (gensym))
+        (stream2 (gensym)))
+    `(multiple-value-bind (,res ,ok? ,stream2) (parse ,stream ,expr)
+       (setf ,stream ,stream2) ; is this doing what I want?
+       (is (and ,ok? ,res) ,val (format nil "Parsing with ~s results in ~s" ',expr ',val)))))
 
-(subtest "Testing <item<"
-  (is (parse "xxx" <item< t) #\x)
-  (isnt (parse "" <item< t) t))
+(defmacro fails (stream expr)
+  (let ((res (gensym))
+        (ok? (gensym))
+        (stream2 (gensym)))
+    `(multiple-value-bind (,res ,ok? ,stream2) (parse ,stream ,expr)
+       (setf ,stream ,stream2) ; Not sure about this...
+       (unless ,res ; doing this to get rid of warning about unused variable
+         (is ,ok? nil (format nil "Parsing with ~s should fail." ',expr))))))
 
-(subtest "Testing <eof<"
-  (ok (parse "" <eof< t))
-  (isnt (parse "MORE CONTENT" <eof< t) t)
+(test-with (input "hey")
+           (results input (<<result t) t)
+           (results input (<<result 'foo) 'foo))
 
-  (let ((stream (make-string-input-stream "abc")))
-    ;; read all the input then test that we're at the end
-    (read-char stream)
-    (read-char stream)
-    (read-char stream)
-    (ok (parse stream <eof<))))
 
-(subtest "Basic <<plus tests"
-  (is (parse "hello" (<<plus <nat< <word<) t) "hello")
-  (is (parse "31hello" (<<plus <nat< <word<) t) 31)
-  (is (parse "33" (<<or <word< <nat< <int<) t) 33)
-  (is (parse "-33" (<<or <word< <nat< <int<) t) -33)
-  (let ((stream1 (make-string-input-stream "abcd")))
-    (multiple-value-bind (res ok? stream2) (parse stream1 (<<~ (<<string "abXd")))
-      (is res nil)            ; The result is NIL, but b/c the parse failed.
-      (is ok? nil)            ; See, the parse should have failed.
-      (isnt stream1 stream2)  ; The streams should now be different objects in memory.
-      ;; Notice that even though "abXd" could have consumed all our input, we're not at the end.
-      (isnt (parse stream2 <eof<) t)
-      ;; But we should still be able to parse "abcd" from STREAM2.
-      (is (parse stream2 (<<string "abcd")) "abcd")
-      ;; Moreover, we should be at the end of the input.
-      (is (parse stream2 <eof<) t))))
+(test-with (input "xxx")
+           (results input <item< #\x)
+           (results input <item< #\x)
+           (results input <item< #\x)
+           (fails input <item<))
+
+(subtest "Testing <<plus"
+  (test-with (input "hello")
+             (results input (<<plus <nat< <word<) "hello")
+             (results input <eof< t))
+
+  (test-with (input "hello31")
+             (results input (<<plus <word< <nat<) "hello")
+             (results input (<<plus <word< <nat<) 31))
+
+  (test-with (input "31hello")
+             (results input (<<plus <nat< <word<) 31)
+             (results input (<<plus <nat< <word<) "hello"))
+
+  (test-with (input "hello31")
+             (results input (<<plus <nat< <word<) "hello")
+             (results input (<<plus <nat< <word<) 31))
+
+  (test-with (input "abcd")
+             (fails input (<<~ (<<string "abXd")))
+             (results input (<<string "abcd") "abcd")
+             (results input <eof< t)))
+
+(subtest "Testing <<and and <<bind"
+  (test-with (input "abcd1234")
+             (results input (<<and <word< (<<ending <nat<)) 1234)))
+
+(subtest "Testing <<*"
+  (test-with (input "abcd1234")
+             (results input (<<* (<<char #\z)) '())
+             (fails input  (<<~ (<<ending <word<)))
+             (results input <word< "abcd")
+             (results input (<<ending (<<* <digit<)) '(#\1 #\2 #\3 #\4))))
+
+
+
+
 

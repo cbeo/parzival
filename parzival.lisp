@@ -108,20 +108,31 @@ in then. If the parse fails the combinator else is run instead."
 ;;; The <<PLUS COMBINATOR is vital, and gives us amazing powers to choose our
 ;;; own future!  This section defines <<plus and uses it to define some nice utilities.
 
+
+;;; TODO - what could make this more efficient is if there was some kind of
+;;; "cleanup stream" function that would search for the smallest safe stream
+;;; abstraction to return in case of a success. Call it instead of
+;;; recover-source.
 (defun <<plus (parser1 parser2)
   "Introduces a choice between two parsers. If PARSER1 succeeds then its result
-is used. If PARSER1 fails then the stream is rewound and tried again with
-PARSER2."
-  (lambda (stream)
-    (let ((stream2 (replay-on stream)))
+  is used. If PARSER1 fails then the stream is rewound and tried again with
+  PARSER2."
+  (lambda (stream1)
+    ;; we need stream2 to rewind from in case of failure
+    (let ((stream2 (replay-on stream1)))
       (<<if (result parser1 stream2)
+            ;; stream3 is whatever parser1 has created, it might be anything
             (lambda (stream3)
               (funcall (<<result result)
+                       ;; to save memory when possible, we recover the
+                       ;; underlying stream. Only safe to do when stream3 IS stream2
                        (if (eq stream3 stream2)
-                           (recover-source stream2)
+                           (recover-source stream2) ;; a.k.a. stream1
                            stream3)))
             (lambda (stream3)
+              ;; in case of failure, we rewind from stream2 and try anew.
               (funcall parser2 (rewind stream2)))))))
+
 
 (defun <<or (parser1 parser2 &rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
@@ -317,12 +328,6 @@ the character C."
           (<<map-cons result (<<* parser))
           (<<result nil))))
 
-  ;; (<<bind (<<? parser)
-  ;;         (lambda (val) (if val
-  ;;                           (<<map-cons val (<<* parser))
-  ;;                           (<<result nil)))))
-
-
 (defun <<+ (parser)
   "Like <<* but fails if P does not succeed at least once."
   (<<cons parser (<<* parser)))
@@ -360,8 +365,6 @@ the character C."
             (<<or (<<and separator-parser
                          (<<map-cons val (<<sep-by value-parser separator-parser)))
                   (<<result (list val))))))
-
-
 
 ;;; VALUE PARSERS. The following section contains utilities for parsing common
 ;;; values like strings or numbers.
