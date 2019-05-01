@@ -22,6 +22,7 @@
    #:<<ending
    #:<<sat
    #:<<~sat
+   #:<<asat
    #:<<char
    #:<<~char
    #:<<char-equal
@@ -54,6 +55,7 @@
    #:<<min-times
    #:<<max-times
    #:<<sep-by
+   #:<<brackets
    #:<<string
    #:<<~string
    #:<<to-string

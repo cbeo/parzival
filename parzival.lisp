@@ -183,15 +183,15 @@ the input stream is first rewound before the fail occurrs."
    parser in sequence, ignoring any intermediate results. The result (<<AND P1
    P2 ... PN) is the result of PN."
   (if parsers
-      (apply #'<<and (cons (<<bind parser1 (lambda (ignore) parser2)) parsers))
-      (<<bind parser1 (lambda (ignore) parser2))))
+      (apply #'<<and (cons (<<bind parser1 (returning parser2)) parsers))
+      (<<bind parser1 (returning parser2))))
 
 
 (defun <<ending (parser)
   "Creates a parser that succeeds if PARSER succeeds and the end of the input has been reached."
   (<<bind parser
           (lambda (result)
-            (<<map (lambda (ignore) result) <eof<))))
+            (<<map (returning result) <eof<))))
 
 
 ;;; PARSING INDIVIDUAL ITEMS from the stream. The basic parser thats of any real
@@ -214,6 +214,12 @@ the input stream is first rewound before the fail occurrs."
           (lambda (c) (if (funcall pred c)
                           <item<
                           <fail<))))
+
+(defmacro <<asat (form)
+  "An anaphoric macro for defining a <<sat type parser where IT is bound to the
+  character being tested"
+  (let ((it (intern (symbol-name 'it))))
+    `(<<sat (lambda (,it) ,form))))
 
 
 (defmacro <<def-item-sat (name pred  &optional docstring)
@@ -321,6 +327,10 @@ the character C."
             (<<map (lambda (tail) (cons head tail)) tail-parser))))
 
 
+(defun <<list (&rest parsers)
+  (if (null parsers) (<<result nil)
+      (<<cons (car parsers) (apply #'<<list (cdr parsers)))))
+
 (defun <<* (parser)
   "Runs the parser PARSER zero or more times, resulting in of list of parsed values."
   (lambda (stream)
@@ -356,6 +366,8 @@ the character C."
                                   (<<result results))))))
 
 
+;;; DELIMITED VALUES
+
 (defun <<sep-by (value-parser separator-parser)
   "Parses a sequence of values with VALUE-PARSER ignoring a separator that is
   parsed with SEPARATOR-PARSER. E.g. (<<SEP-BY <NAT< (<<CHAR #\,)) would parse
@@ -366,18 +378,29 @@ the character C."
                          (<<map-cons val (<<sep-by value-parser separator-parser)))
                   (<<result (list val))))))
 
+(defun <<brackets (left center right)
+  (<<and left (<<bind center
+                      (lambda (bracketed-value)
+                        (<<map (returning bracketed-value) right)))))
+
+
+(defun <<char-brackets (left-char center right-char)
+  (<<brackets (<<char left-char) center (<<char right-char)))
+
+
+
 ;;; VALUE PARSERS. The following section contains utilities for parsing common
 ;;; values like strings or numbers.
 
 (defun <<string (str)
   "Parses exactly the string STR, resulting in STR on success."
-  (<<map (lambda (ignore) str)
+  (<<map (returning str)
          (apply #'<<and (loop for c across str collect (<<~char c)))))
 
 
 (defun <<~string (str)
   "Parses exactly the string STR, resulting in STR. Rewinding version."
-  (<<map (lambda (ignore) str)
+  (<<map (returning str)
          (<<~ (apply #'<<and (loop for c across str collect (<<char c))))))
 
 
@@ -406,5 +429,47 @@ the character C."
                          <nat<)))
         "Parses an integer")
 
+(defun flatten (tree)
+  (let ((ls 'nil))
+    (labels ((rec (tr)
+               (cond ((null tr) nil)
+                     ((atom (car tr))
+                      (push (car tr) ls)
+                      (rec (cdr tr)))
+                     (t (rec (car tr))
+                        (rec (cdr tr))))))
+      (rec tree)
+      (nreverse ls))))
 
 
+
+(defun read-from-tree (tree)
+  (read-from-string
+   (concatenate 'string
+                (remove-if-not (lambda (x) x)
+                               (flatten tree)))))
+
+(<<def <frac<
+       (<<or (<<bind (<<char #\.)
+                     (lambda (dot)
+                       (<<map (lambda (frac)
+                                (read-from-char-list (cons dot frac)))
+                              (<<+ <digit<))))
+             (<<result 0)))
+
+
+
+(<<def <real<
+       (<<bind (<<? (<<char #\-))
+               (lambda (neg?)
+                 (<<bind <int<
+                         (lambda (whole)
+                           (<<map (lambda (frac)
+                                    (* (if neg? -1 1) (+ whole frac)))
+                                  <frac<))))))
+
+;;; UTILITY FUNCTIONS
+
+(defun returning (x)
+  "Returns a lambda that returns x no matter what it gets as an argument"
+  (lambda (ignore) x))
