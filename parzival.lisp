@@ -32,9 +32,10 @@
 
 (defun parse (stream parser &optional string-as-stream-p)
   "Parse STREAM with PARSER. If STRING-AS-STREAM-P then STREAM can be a string."
-  (if string-as-stream-p
-      (funcall parser (make-string-input-stream stream))
-      (funcall parser stream)))
+  (funcall parser stream))
+  ;; (if string-as-stream-p
+  ;;     (funcall parser (make-instance 'static-text-replay-stream :text stream))
+  ;;     (funcall parser stream)))
 
 
 ;;; A private utility macro for defining a defvar and a defun at the same time,
@@ -113,25 +114,34 @@ in then. If the parse fails the combinator else is run instead."
 ;;; "cleanup stream" function that would search for the smallest safe stream
 ;;; abstraction to return in case of a success. Call it instead of
 ;;; recover-source.
+;; (defun <<plus (parser1 parser2)
+;;   "Introduces a choice between two parsers. If PARSER1 succeeds then its result
+;;   is used. If PARSER1 fails then the stream is rewound and tried again with
+;;   PARSER2."
+;;   (lambda (stream2)
+;;     ;; we need stream2 to rewind from in case of failure
+;;     (let ((stream2 (replay-on stream1)))
+;;       (<<if (result parser1 stream2)
+;;             ;; stream3 is whatever parser1 has created, it might be anything
+;;             (lambda (stream3)
+;;               (funcall (<<result result)
+;;                        ;; to save memory when possible, we recover the
+;;                        ;; underlying stream. Only safe to do when stream3 IS stream2
+;;                        (if (eq stream3 stream2)
+;;                            (recover-source stream2) ;; a.k.a. stream1
+;;                            stream3)))
+;;             (lambda (stream3)
+;;               ;; in case of failure, we rewind from stream2 and try anew.
+;;               (funcall parser2 (rewind stream2)))))))
+
 (defun <<plus (parser1 parser2)
-  "Introduces a choice between two parsers. If PARSER1 succeeds then its result
-  is used. If PARSER1 fails then the stream is rewound and tried again with
-  PARSER2."
-  (lambda (stream1)
-    ;; we need stream2 to rewind from in case of failure
-    (let ((stream2 (replay-on stream1)))
-      (<<if (result parser1 stream2)
-            ;; stream3 is whatever parser1 has created, it might be anything
-            (lambda (stream3)
-              (funcall (<<result result)
-                       ;; to save memory when possible, we recover the
-                       ;; underlying stream. Only safe to do when stream3 IS stream2
-                       (if (eq stream3 stream2)
-                           (recover-source stream2) ;; a.k.a. stream1
-                           stream3)))
-            (lambda (stream3)
-              ;; in case of failure, we rewind from stream2 and try anew.
-              (funcall parser2 (rewind stream2)))))))
+  (lambda (stream)
+    (let ((chkpt (checkpoint stream)))
+      (<<if (result parser1 stream)
+            (<<result result)
+            (progn
+              (rewind-to stream chkpt)
+              parser2)))))
 
 
 (defun <<or (parser1 parser2 &rest parsers)
@@ -334,9 +344,18 @@ the character C."
 (defun <<* (parser)
   "Runs the parser PARSER zero or more times, resulting in of list of parsed values."
   (lambda (stream)
-    (<<if (result (<<~ parser) stream)
-          (<<map-cons result (<<* parser))
-          (<<result nil))))
+    (let ((result nil)
+          (parser (<<~ parser)))
+      (labels ((rec (stream)
+                 (multiple-value-bind
+                       (res ok? stream2) (funcall parser stream)
+                   (if ok?
+                       (progn
+                         (push res result)
+                         (rec stream2))
+                       (values (nreverse result) t stream2)))))
+        (rec stream)))))
+
 
 (defun <<+ (parser)
   "Like <<* but fails if P does not succeed at least once."
@@ -372,11 +391,9 @@ the character C."
   "Parses a sequence of values with VALUE-PARSER ignoring a separator that is
   parsed with SEPARATOR-PARSER. E.g. (<<SEP-BY <NAT< (<<CHAR #\,)) would parse
   a string like '1,2,3,4' and result in a list (1 2 3 4)"
-  (<<bind value-parser
-          (lambda (val)
-            (<<or (<<and separator-parser
-                         (<<map-cons val (<<sep-by value-parser separator-parser)))
-                  (<<result (list val))))))
+  (<<cons value-parser (<<* (<<and separator-parser value-parser))))
+
+
 
 (defun <<brackets (left center right)
   (<<and left (<<bind center

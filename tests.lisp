@@ -8,7 +8,7 @@
 
 (defmacro test-with ((var input-string) &rest tests)
   `(subtest (format nil "With the input ~s ..." ,input-string)
-     (let ((,var (make-string-input-stream ,input-string)))
+     (let ((,var (make-instance 'replay-streams:static-text-replay-stream :text ,input-string)))
        ,@tests)))
 
 (defmacro results (stream expr val)
@@ -16,7 +16,6 @@
         (ok? (gensym))
         (stream2 (gensym)))
     `(multiple-value-bind (,res ,ok? ,stream2) (parse ,stream ,expr)
-       (setf ,stream ,stream2) ; is this doing what I want?
        (is (and ,ok? ,res) ,val (format nil "Parsing with ~s results in ~s" ',expr ',val)))))
 
 (defmacro fails (stream expr)
@@ -24,7 +23,6 @@
         (ok? (gensym))
         (stream2 (gensym)))
     `(multiple-value-bind (,res ,ok? ,stream2) (parse ,stream ,expr)
-       (setf ,stream ,stream2) ; Not sure about this...
        (unless ,res ; doing this to get rid of warning about unused variable
          (is ,ok? nil (format nil "Parsing with ~s should fail." ',expr))))))
 
