@@ -109,31 +109,6 @@ in then. If the parse fails the combinator else is run instead."
 ;;; The <<PLUS COMBINATOR is vital, and gives us amazing powers to choose our
 ;;; own future!  This section defines <<plus and uses it to define some nice utilities.
 
-
-;;; TODO - what could make this more efficient is if there was some kind of
-;;; "cleanup stream" function that would search for the smallest safe stream
-;;; abstraction to return in case of a success. Call it instead of
-;;; recover-source.
-;; (defun <<plus (parser1 parser2)
-;;   "Introduces a choice between two parsers. If PARSER1 succeeds then its result
-;;   is used. If PARSER1 fails then the stream is rewound and tried again with
-;;   PARSER2."
-;;   (lambda (stream2)
-;;     ;; we need stream2 to rewind from in case of failure
-;;     (let ((stream2 (replay-on stream1)))
-;;       (<<if (result parser1 stream2)
-;;             ;; stream3 is whatever parser1 has created, it might be anything
-;;             (lambda (stream3)
-;;               (funcall (<<result result)
-;;                        ;; to save memory when possible, we recover the
-;;                        ;; underlying stream. Only safe to do when stream3 IS stream2
-;;                        (if (eq stream3 stream2)
-;;                            (recover-source stream2) ;; a.k.a. stream1
-;;                            stream3)))
-;;             (lambda (stream3)
-;;               ;; in case of failure, we rewind from stream2 and try anew.
-;;               (funcall parser2 (rewind stream2)))))))
-
 (defun <<plus (parser1 parser2)
   (lambda (stream)
     (let ((chkpt (checkpoint stream)))
