@@ -32,11 +32,9 @@
 
 (defun parse (stream parser &optional string-as-stream-p)
   "Parse STREAM with PARSER. If STRING-AS-STREAM-P then STREAM can be a string."
-  (funcall parser stream))
-  ;; (if string-as-stream-p
-  ;;     (funcall parser (make-instance 'static-text-replay-stream :text stream))
-  ;;     (funcall parser stream)))
-
+  (if string-as-stream-p
+      (funcall parser (make-instance 'replay-streams:static-text-replay-stream :text stream))
+      (funcall parser stream)))
 
 ;;; A private utility macro for defining a defvar and a defun at the same time,
 ;;; intended for use in defining parsers as the result of other parsers, but
@@ -259,6 +257,16 @@ the character C."
 (<<def-item-sat <newline< (lambda (c) (eql c #\Newline))
                 "Parses a single new line character.")
 
+(<<def-item-sat <tab< (lambda (c) (eql c #\Tab))
+                "Parses a single tab character")
+
+(<<def-item-sat <return< (lambda (c) (eql c #\Return))
+                "Parses a single carriage return character")
+
+(<<def-item-sat <linefeed< (lambda (c) (eql c #\Linefeed))
+                "Parses a single linefeed character")
+
+
 
 (defun digit-p (c)
   (and (alphanumericp c)
@@ -402,6 +410,9 @@ the character C."
   (<<map (lambda (result) (concatenate 'string result)) parser))
 
 
+(<<def <whitespace< (<<* (<<or <space< <newline< <return< <linefeed< <tab<))
+       "Parses zero or more whitespace characters, returning them as a list")
+
 (<<def <word< (<<to-string (<<+ <letter<))
         "Parses a sequence of one or more letters characters, resulting in
         a string containing them.")
@@ -421,25 +432,6 @@ the character C."
                          <nat<)))
         "Parses an integer")
 
-(defun flatten (tree)
-  (let ((ls 'nil))
-    (labels ((rec (tr)
-               (cond ((null tr) nil)
-                     ((atom (car tr))
-                      (push (car tr) ls)
-                      (rec (cdr tr)))
-                     (t (rec (car tr))
-                        (rec (cdr tr))))))
-      (rec tree)
-      (nreverse ls))))
-
-
-
-(defun read-from-tree (tree)
-  (read-from-string
-   (concatenate 'string
-                (remove-if-not (lambda (x) x)
-                               (flatten tree)))))
 
 (<<def <frac<
        (<<or (<<bind (<<char #\.)
@@ -447,7 +439,8 @@ the character C."
                        (<<map (lambda (frac)
                                 (read-from-char-list (cons dot frac)))
                               (<<+ <digit<))))
-             (<<result 0)))
+             (<<result 0))
+       "Parses a fractional number in decimal format - e.g. .3234 or .002")
 
 
 
@@ -458,7 +451,17 @@ the character C."
                          (lambda (whole)
                            (<<map (lambda (frac)
                                     (* (if neg? -1 1) (+ whole frac)))
-                                  <frac<))))))
+                                  <frac<)))))
+       "Parses a real number")
+
+
+;;; LANGUAGE UTILITIES
+
+(defun <<strip (parser &optional (strip <whitespace<))
+  "Returns parses PARSER that may be surrounded on the left and the right by
+   zero or more STRIP. The contented parsed by STRIP is ignored"
+  (<<brackets strip parser strip))
+
 
 ;;; UTILITY FUNCTIONS
 

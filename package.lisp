@@ -39,6 +39,12 @@
    #:<~space<
    #:<newline<
    #:<~newline<
+   #:<tab<
+   #:<~tab<
+   #:<return<
+   #:<~return<
+   #:<linefeed<
+   #:<~linefeed<
    #:<digit<
    #:<~digit<
    #:<<map
@@ -60,11 +66,12 @@
    #:<<~string
    #:<<to-string
    #:<word<
-   #:<~word<
    #:<nat<
-   #:<~nat<
    #:<int<
-   #:<~int<
+   #:<real<
+   #:<whitespace<
+   #:<<strip
    ))
 
 
+ 
