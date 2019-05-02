@@ -1,0 +1,530 @@
+
+* A JSON parser written with =parzival=
+
+  This file introduces the =parzival= Common Lisp library by building a simple
+  JSON parser. The parser that is completed will not be a "full" JSON parser in
+  that it won't parse the full range of number forms in the JSON spec, nor will
+  it parse escaped quote characters inside of strings. The code is for
+  educational purposes only.
+
+  While as [[https://en.wikipedia.org/wiki/Parzival][Parzival]] sought the Holy Grail through much trial and folly,
+  =parzival= searches the space of context free languages while avoiding the
+  unholy =<fail<=.
+
+** Preliminary Concepts & Conventions
+
+  =parzival= is a Common Lisp library that provides a domain-specific language
+  for writing parsers. Specifically, =parzival= defines a parser to be a
+  function that accepts a stream of characters as input and returns structured
+  data. For example, a parser might accept a string containing HTML and return a
+  data structure representing the hierarchical structure of an HTML document. 
+
+  The =parzival= language uses the *parser-combinator* approach to parser
+  construction. Here, the word *combinator* is used to mean "higher-order
+  function". If a parser is a function that accepts character stream and returns
+  some data, then a parser-combinator is a function that accepts and returns
+  parsers.  
+
+
+*** By your parsers combined....
+
+   The basic notion of the parser-combinator approach is to build large parsers
+   by combining smaller ones. You create utility combinators that stick parsers
+   together to make bigger parsers. A common approach, and one that you will
+   expore in what follows, is to create small parsers for different kinds of
+   values, each of which can operate on their own, but that become more powerful
+   when combined. Think [[https://en.wikipedia.org/wiki/Captain_Planet_and_the_Planeteers][Captain Planet]] or [[https://en.wikipedia.org/wiki/Voltron][Voltron]], but for parsing text into
+   structured data.
+
+*** More About Parsers  
+
+    The characterization of parsers above i *almost* accurate. In =parzival=, a
+    parser is a function that accepts a stream of characters, and retunrs three
+    values: a possible result, a boolean indicating whether the parse succeed or
+    failed, and a stream which may or may not be identical to the stream the
+    parser was passed as its argument.
+
+    **NOTE:** The third value, the stream, may not be a part of the final design.
+  
+    For the most part, however, when you are building your own parsers, you
+    don't have to think about the other two values. =parzival= provides
+    abstractions that let you work focus your attention on the results of a
+    parse while managing success states and stream modifications for
+    you.
+
+*** Naming Conventions
+
+    In order to quickly and easily distinguish between parsers and
+    parser-combinators while you are building your projects, =parzival= adopts a
+    simple naming convention.  
+
+    1. The name of a parser should begin and end with =<= symbols. E.g. =<foo<=
+    2. The name of a function that accepts or returns a parser should begin with
+       =<<=, E.g. =<<foo=
+
+    There are a few more little naming conventions that the =parzival= package
+    adopts, such as a =?= indicating that the parser's value is "optional" and a
+    =~= indicating that the parser is "rewinding", i.e. it will rewind the
+    stream to a certain point before failing. You do not need to adhere to these
+    littler rules if they would chafe you.
+ 
+    These conventions may seem grotesque to some Lispers, but in practice they
+    have helped keep clear the meaning of =parzival= code. The =<= symbol was
+    chosen to be suggesting of an arrow pointing from right to left, or perhaps
+    stream of data flowing in and flowing out, from right to left.
+
+** A JSON Parser
+
+   Now you get to see now fun and easy it is to use =parzival= to make "real"
+   parsers.
+
+*** JSON for you
+
+    If you are not familar with [[https://en.wikipedia.org/wiki/JSON][JSON]], you should check it out. The [[https://json.org][json.org]] site
+    is especially relevant if you want to create a parser for the the format.
+
+    You will be using the following JSON document as reference for the remainder
+    of the tutorial:
+
+#+begin_src json
+
+{"name" : "Boutade",
+ "languages" : [ {"lang" : "Common Lisp",
+                 "proficiency" : null,
+                 "lovesIt" : true }
+
+              , {"lang" : "Rust",
+                 "proficiency" : 0.8,
+                 "lovesIt" : true,
+                 "isAshamedToLoveIt" : true}
+
+              , {"lang" : "Haskell",
+                 "proficiency" : 0.5,
+                 "lovesIt" : "sometimes, in some ways"} 
+              ],
+  "pizzaOrder" : ["Tempeh Italian Sausage", "Spinach", "Mushrooms", "Red Pepper Flakes"],
+  "isCool" : false,
+  "isFunny" : false,
+  "thinksPeopleAreLaughing" : true,
+  "beHonest_thinksPeopleAreLaughing" : false
+}
+
+#+end_src
+
+  Time to start writing code to parse the above!
+    
+*** Lisp boiler plate
+
+    Open your text editor and define the package you will use throughout:
+
+#+begin_src lisp
+;; Assuming you have parzival available to you, e.g. via ~/quicklisp/local-projects/
+
+(defpackage "parzival-json"
+  (:use :cl :parzival))
+
+(in-package "parzival-json")
+
+#+end_src
+
+*** Parsing JSON Values  
+
+    A JSON value is one of the following things:
+    
+    1. string, e.g. ="Hey whats happening?"=
+    2. number, e.g. =33.234=
+    3. boolean, e.g. =true= or =false=
+    4. =null=
+    5. object, e.g. ={"foo" : "bar"}=
+    6. array, e.g. =["hey", "I'm", "an", "array"]=
+
+    In the following you will build a parser called =<json-value<= that will
+    accpet some JSON and return a Lisp structure. The =<json-value<= parser will
+    be built out of several smaller parsers, one for each of the items in the
+    above list.  
+
+    
+*** Matching Whitespace
+
+    The first parser you will write matches any number of whitespace characters.
+    You will want to ignore much of the whitespace in your input string, so this
+    is your most basic utility parser.
+
+#+begin_src lisp
+
+(defvar <whitespace< (<<* (<<plus <space< <newline<)))
+
+#+end_src
+
+   The definition of =<whitespace<= demonstrates a surprising number of concepts
+   central to the =parzival= way.  Here's how it works:
+
+   First the =<space<= and =<newline<= parsers, which are built-in to
+   =parzival=, each accept a single character of input, matching a space or a
+   newline character repsectively, and returning that character as the parse
+   result.
+
+   Next, the =<<plus= combinator is used to create a new parser that will
+   succeed if either one of its arguments succeeds. In this case, you make a
+   parser =(<<plus <space< <newline<)= that will match and return *either* a
+   space character *or* a newline character.  Pretty cool.
+
+   Finally, the combinator =<<*= creates a new parser that matches zero or more
+   of its argument, returning the results in a list. That is, if =<foo<= is a
+   parser, then the new parser =(<<* <foo<)= will consume the input by parsing
+   =<foo= over and over again until =<foo= fails to parse any more input,
+   returning all those parse results in a list.
+
+   *ASIDE*: The =*= is meant to be reminiscent of the Kleene-star that you might be
+   familiar with from common regular expression syntaxes.)
+
+   To better see how all this fits together, check out this REPL session:
+
+#+begin_src lisp
+;; matching and returning a single space from a string of spaces
+|parzival-json|> (parse-string <space< "    ")    
+#\ 
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {10027DD303}>
+
+;; failing to match a space, input starts with an #\x character
+|parzival-json|> (parse-string <space< "xyz")     
+NIL
+NIL
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {100287CE53}>
+
+;; matching and returning a newline
+|parzival-json|> (parse-string (<<or <space< <newline<) "
+")                                                
+#\Newline
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {100298F343}>
+
+;; failing to match either, empty string
+|parzival-json|> (parse-string (<<or <space< <newline<) "") 
+NIL
+NIL
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1002C54CC3}>
+
+;; finally, matching a bunch of spaces or newlines and returning them as a list
+|parzival-json|> (parse-string (<<* (<<or <space< <newline<)) "     
+  ")
+(#\  #\  #\  #\  #\  #\Newline #\  #\ )
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1002D16473}>
+
+;; equivalently, just use your newly minted <whitespace< parser
+|parzival-json|> (parse-string <whitespace< "     
+  ")
+(#\  #\  #\  #\  #\  #\Newline #\  #\ )
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1002ED8693}>
+#+end_src
+
+   Looking at the above, you already begin to see how new parsers can be built
+   up from old. We can go from a parser that accepts a single character, to one
+   that accepts either of two characters, to one that accepts a list of zero or
+   more of either of those two characters in a single clean line of code. Nice
+   stuff!
+
+
+**** Ignoring Whitespace
+
+     Now that you can match strings of whitespace you will create a parser to
+     ignore whitespace. Specifially, you'll write a parser that effectively
+     "strips" the whitespace around some other parser. The combinator doing the
+     heavy lifting is called =<<brackets=, here is its docstring:
+
+#+begin_quote
+
+(<<BRACKETS LEFT CENTER RIGHT) parses CENTER delimited by LEFT and RIGHT. The
+results of LEFT and RIGHT are ignored. (<<BRACKETS LEFT CENTER RIGHT) fails if
+any of its three arguments fails.
+
+#+end_quote
+     
+    In case it isn't clear, =<<brackets= lets you parse strings like ="[stuff]"=
+    or ="{{432}}"= that begin and end with some kind of opening and closing
+    "brackets" that serve only to delmite the values you're interested in.
+    
+    Here's how you can use =<<brackets= to create a new combinator that is used
+    to ignore the whitespace surrounding some text of interest:
+
+#+begin_src lisp
+
+(defun <<strip (parser)
+   "Ignore whitespace around PARSER"
+   (<<brackets <whitespace< parser <whitespace<))
+
+#+end_src
+
+   Well thats enough utilities for now. Your next step is to parse actual JSON values!
+
+*** The simple JSON values: null, bool, and, number
+
+    Here you will build small, stand-alone, parsers capable of transforming a
+    few kinds of JSON formatted expressions into Common Lisp atoms.  Specifically
+    
+    - ="null"= will parse to =null=
+    - ="true"= will parse to =T= 
+    - ="false"= will parse to =NIL=
+    - and a number string like ="33.421"= will become =33.421=
+
+   The first new combinator you need to understand is called =<<string=. Its job
+   is to create a parser that matches exactly one string and return it. For
+   example, evaluating =(<<string "goobers")= returns a parser that matches
+   exactly the string ="goobers"= in the input and returns that same string. If
+   ="goobers"= is not found in the input, then the parse fails.  
+
+   The next combinator is slightly interesting, and it is called =<<map=. If
+   =my-cool-parser= is a parser that results in a value =x=, then evaluating
+   =(<<map func my-cool-parser)= returns a new parser that results in a the
+   value =(funcall func x)=. That is, =<<map= changes the output of a successful
+   parse. If =my-cool-parser= fails, then so does =(<<map func my-cool-parser)=.
+
+   A concrete example should help:
+
+#+begin_src lisp
+
+(defvar <json-null< (<<map (lambda (null) :null) 
+                           (<<string "null")))
+
+#+end_src
+   
+   So, =<json-null<= matches exactly the string ="null"= using =(<<string "null")=. 
+   If the match was successful, instead of returning just returning
+   ="null"= you feed it to the function =(lambda (null) :null)=, which just
+   ignores its argument and returns =:null=.
+   
+   Similarly you can define =<json-bool<=:
+
+#+begin_src lisp
+
+(defvar <json-bool< (<<map (lambda (bool) (if (equal bool "true") T NIL))
+                           (<<plus (<<string "true") (<<string "false"))))
+
+#+end_src
+
+   The =<json-bool<= will only succed if it matches either the string ="true"=
+   or the string ="false"=. You then check which string was matched and return
+   =T= or =NIL=.
+
+   Finally, you're going to cheat a bit on number parsing and just use the
+   built-in number parser that ships standard with =parzival=.
+
+#+begin_src lisp
+
+(defvar <json-num< <real<)
+
+#+end_src
+
+   It should be re-emphasized that =<json-num<= doesn't actually parse the full
+   range of number forms that JSON is supposed to support. This parser is purely
+   educational.
+
+*** The JSON String Parser
+
+    The only new forms you must understand in order to write =<json-string<= are
+    =<<char= and =<<sat=. Both combinators are used to create parsers that
+    accept a single character. Quite simply, evaluating =(<<char #\x)= returns a
+    parser that accepts exactly the character =#\x=, and =(<<sat a-predicate)=
+    returns a parser that accepts a character =c= if =(funcall a-predicate c)=
+    is true. In fact, =<<char= is written in terms of =<<sat=. With that in
+    mind, you can proceed.
+
+    #+begin_src lisp
+
+(defvar <json-string< (<<brackets (<<char #\")
+                                  (<<to-string (<<* (<<sat (lambda (c) (not (eql c #\"))))))
+                                  (<<char #\")))
+
+    #+end_src
+
+    So you can see that =<json-string<= matchs a double quote character, then
+    matches zero or more characters that are not a double quote character, then
+    another double quote character. The result is returned as a lisp string by
+    means of the =<<to-string= combinator, which uses =<<map= and =concatenate=
+    under the hood.
+
+    
+*** Some trickery with mutually recursive parsers
+
+    You're nearly ready to write your =<json-value<= parser. You're only missing
+    =<json-object<= and =<json-array<=, but there's a sticky point to consider:
+    A JSON value can be anything from that list of six values in [[Parsing JSON Values]] above.
+
+    But here's the rub. A JSON value can be an JSON object, but a JSON object
+    can contain JSON values.  And the same can be said of JSON arrays.  
+
+    Recalling that a parser is just a function, you can defer the definition of
+    these two parsers by defining them as functions that simply call some other
+    function that has yet to be defined. Here's how it works:
+
+#+begin_src lisp
+
+(defun <json-array< (stream)
+   (funcall <real-json-array< stream))
+
+(defun <json-object< (stream)
+   (funcall <real-json-object< stream))
+
+;; The <<or combinator is like <<plus, but it accepts two or more arguments.
+(defvar <json-value<
+   (<<or <json-num< <json-bool< <json-null< <json-string< #'<json-array< #'<json-object<))
+
+#+end_src
+
+  So there it is! You've "defined" you JSON parser, but only in a sense. You
+  still need to fill in the missing values for =<real-json-object<= and
+  =<real-json-array<=.
+
+*** Parsing sequences sperated by tokens
+
+    To parse JSON arrays and JSON objects, you will make use of the handy
+  =<<sep-by= combinator. The job of =<<sep-by= is to produce a parser that
+  parses a list of values seperated by some token. In your case, you want to
+  parse arrays like =[1,2,3,4]=  and key-value pairs 
+  like ={"foo" : true, "bar" : false}= which are seperated by commas.
+
+  In fact, because commas surrounded by whitespace are used to separate JSON
+  values in both objects as well as arrays, you should define a handy helper to
+  parse that separator:
+
+#+begin_src lisp
+
+(defvar <comma-sep< (<<strip (<<char #\,)))
+
+#+end_src
+
+  Now you're ready to define =<real-json-array<= :
+
+#+begin_src lisp
+
+(defvar <real-json-array<
+  (<<char-brackets #\[
+                   (<<sep-by <json-value< <comma-sep<)
+                   #\]))
+
+#+end_src
+
+  You can almost read what its doing there: Parse a list of comma-separated JSON
+  values that are brackted by the =[= and =]= characters.  Incredible!
+
+  The parser for JSON objects seems like it should be very similar. It too is a
+  comma-separated list of things, but those things are key-value pairs instead
+  of simple json values. Pretend that you have a parser called
+  =<json-key-value-pair<= already written. Then you can write:
+
+#+begin_src lisp
+
+(defvar <real-json-object<
+   (<<char-brackets #\[
+                    (<<sep-by <json-key-value-pair< <comma-sep<)
+                    #\]))
+
+#+end_src
+
+  But of course, that wont compile because you haven't actually written that
+  missing parser. To do so, you will use the final core combinator that
+  =parzival= provides, it is called =<<bind=.
+
+  
+*** The <<bind Combinator a.k.a. What's a Monad? 
+
+    Before you read an explanation of how bind works, it might help to see an example:
+
+#+begin_src lisp
+> (parse-string (<<bind <nat<
+                        (lambda (count) (<<times count (<<char #\x))))
+                "4xxxx")
+(#\x #\x #\x #\x)
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1003BE2F33}>
+
+|parzival-json|> (parse-string (<<bind <nat<
+                                      (lambda (count) (<<times count (<<char #\x))))
+                               "4xxx")
+NIL
+NIL
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1003CF29D3}>
+
+#+end_src
+  
+  So what's happening here? First, the parser =<nat<= parses a natural number,
+  like =3= or =432=, and evaluating the combinator =(<<times n parser1)= returns
+  a parser that parses =parser1= exactly =n= times.
+
+  The above fragment parses a number, and then uses that number to create a new
+  parser that will parse the character =#\x= exactly that number of times.
+
+  You can see that "4xxxx" will succeed but "4xxx" will fail.
+
+  With that in mind, its time to write =<json-key-value-pair<= and wrap up this
+  document.
+
+  #+begin_src lisp
+
+(defvar <json-key-value-pair<
+  (<<bind (<<brackets <whitespace<
+                      <json-string<
+                      (<<and <whitespace<
+                             (<<char #\:)
+                             <whitespace<))
+          (lambda (key)
+            (<<map (lambda (value) (cons key value))
+                   <json-value<))))
+
+
+  #+end_src
+
+  A quick explaination: the call to =<<brackets= produces a parser that matches
+  the key as a string, ensuring that a =#\:= occurs after the key. Then, using
+  that key, you return a parser that reads any JSON value and returns the cons
+  of the key and that value.  Ta da!
+
+  
+    
+*** Demo
+
+
+#+begin_src lisp
+
+|json-parzival|> (defvar json-txt "{\"name\" : \"Boutade\",
+ \"languages\" : [ {\"lang\" : \"Common Lisp\",
+                 \"proficiency\" : null,
+                 \"lovesIt\" : true }
+
+              , {\"lang\" : \"Rust\",
+                 \"proficiency\" : 0.8,
+                 \"isAshamedToLoveIt\" : true}
+
+              , {\"lang\" : \"Haskell\",
+                 \"proficiency\" : 0.5,
+                 \"lovesIt\" : \"sometimes, in some ways\"} 
+              ],
+  \"religion\" : \"Goofism\",
+  \"pizzaOrder\" : [\"Tempeh Italian Sausage\", \"Spinach\", \"Mushrooms\", \"Red Pepper Flakes\"],
+  \"isCool\" : false,
+  \"isFunny\" : false,
+  \"thinksPeopleAreLaughing\" : true,
+  \"beHonest_thinksPeopleAreLaughing\" : false
+}")
+JSON-TXT
+
+|json-parzival|> (parse json-txt <json-value< t)
+(("name" . "Boutade")
+ ("languages"
+  (("lang" . "Common Lisp") ("proficiency" . :NULL) ("loves-it" . T))
+  (("lang" . "Rust") ("proficiency" . 0.8) ("is-ashamed-to-love-it" . T))
+  (("lang" . "Haskell") ("proficiency" . 0.5)
+   ("loves-it" . "sometimes, in some ways")))
+ ("religion" . "Goofism")
+ ("pizzaOrder" "Tempeh Italian Sausage" "Spinach" "Mushrooms"
+  "Red Pepper Flakes")
+ ("isCool") ("isFunny") ("thinksPeopleAreLaughing" . T)
+ ("beHonest_thinksPeopleAreLaughing"))
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {10033FE0A3}>
+
+
+#+end_src
