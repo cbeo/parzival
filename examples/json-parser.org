@@ -120,10 +120,10 @@
 #+begin_src lisp
 ;; Assuming you have parzival available to you, e.g. via ~/quicklisp/local-projects/
 
-(defpackage "parzival-json"
+(defpackage "json-parzival"
   (:use :cl :parzival))
 
-(in-package "parzival-json")
+(in-package "json-parzival")
 
 #+end_src
 
@@ -182,39 +182,39 @@
 
 #+begin_src lisp
 ;; matching and returning a single space from a string of spaces
-|parzival-json|> (parse-string <space< "    ")    
+|json-parzival|> (parse-string <space< "    ")    
 #\ 
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {10027DD303}>
 
 ;; failing to match a space, input starts with an #\x character
-|parzival-json|> (parse-string <space< "xyz")     
+|json-parzival|> (parse-string <space< "xyz")     
 NIL
 NIL
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {100287CE53}>
 
 ;; matching and returning a newline
-|parzival-json|> (parse-string (<<or <space< <newline<) "
+|json-parzival|> (parse-string (<<or <space< <newline<) "
 ")                                                
 #\Newline
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {100298F343}>
 
 ;; failing to match either, empty string
-|parzival-json|> (parse-string (<<or <space< <newline<) "") 
+|json-parzival|> (parse-string (<<or <space< <newline<) "") 
 NIL
 NIL
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1002C54CC3}>
 
 ;; finally, matching a bunch of spaces or newlines and returning them as a list
-|parzival-json|> (parse-string (<<* (<<or <space< <newline<)) "     
+|json-parzival|> (parse-string (<<* (<<or <space< <newline<)) "     
   ")
 (#\  #\  #\  #\  #\  #\Newline #\  #\ )
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1002D16473}>
 
 ;; equivalently, just use your newly minted <whitespace< parser
-|parzival-json|> (parse-string <whitespace< "     
+|json-parzival|> (parse-string <whitespace< "     
   ")
 (#\  #\  #\  #\  #\  #\Newline #\  #\ )
 T
@@ -441,7 +441,7 @@ any of its three arguments fails.
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1003BE2F33}>
 
-|parzival-json|> (parse-string (<<bind <nat<
+|json-parzival|> (parse-string (<<bind <nat<
                                       (lambda (count) (<<times count (<<char #\x))))
                                "4xxx")
 NIL

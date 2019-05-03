@@ -62,6 +62,7 @@
    #:<<max-times
    #:<<sep-by
    #:<<brackets
+   #:<<char-brackets
    #:<<string
    #:<<~string
    #:<<to-string

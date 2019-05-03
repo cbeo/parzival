@@ -8,7 +8,8 @@
 
 (defmacro test-with ((var input-string) &rest tests)
   `(subtest (format nil "With the input ~s ..." ,input-string)
-     (let ((,var (make-instance 'replay-streams:static-text-replay-stream :text ,input-string)))
+     (let ((,var (make-instance 'replay-streams:character-input-replay-stream
+                                :source (make-string-input-stream ,input-string))))
        ,@tests)))
 
 (defmacro results (stream expr val)

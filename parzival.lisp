@@ -30,6 +30,7 @@
 
 ;;; The PARSE function. Runs parsers.
 
+;; TODO refactor parse to detect how best to create a replay stream, automatically
 (defun parse (stream parser &optional string-as-stream-p)
   "Parse STREAM with PARSER. If STRING-AS-STREAM-P then STREAM can be a string."
   (if string-as-stream-p
@@ -111,12 +112,14 @@ in then. If the parse fails the combinator else is run instead."
   (lambda (stream)
     (let ((chkpt (checkpoint stream)))
       (<<if (result parser1 stream)
-            (<<result result)
+            (progn
+              (free-checkpoint stream chkpt)
+              (<<result result))
             (progn
               (rewind-to stream chkpt)
               parser2)))))
 
-
+;; I thin i see... checkpoints to the same point are being removed when they should't be
 (defun <<or (parser1 parser2 &rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
 failure, and resulting in the first successful parse."
@@ -326,18 +329,24 @@ the character C."
 
 (defun <<* (parser)
   "Runs the parser PARSER zero or more times, resulting in of list of parsed values."
-  (lambda (stream)
-    (let ((result nil)
-          (parser (<<~ parser)))
-      (labels ((rec (stream)
-                 (multiple-value-bind
-                       (res ok? stream2) (funcall parser stream)
-                   (if ok?
-                       (progn
-                         (push res result)
-                         (rec stream2))
-                       (values (nreverse result) t stream2)))))
-        (rec stream)))))
+  (<<bind (<<? parser)
+          (lambda (result)
+            (if (null result) (<<result result)
+                (<<map-cons result (<<* parser))))))
+
+
+  ;; (lambda (stream)
+  ;;   (let ((result nil)
+  ;;         (parser (<<~ parser)))
+  ;;     (labels ((rec (stream)
+  ;;                (multiple-value-bind
+  ;;                      (res ok? stream2) (funcall parser stream)
+  ;;                  (if ok?
+  ;;                      (progn
+  ;;                        (push res result)
+  ;;                        (rec stream2))
+  ;;                      (values (nreverse result) t stream2)))))
+  ;;       (rec stream)))))
 
 
 (defun <<+ (parser)
@@ -386,7 +395,6 @@ the character C."
 
 (defun <<char-brackets (left-char center right-char)
   (<<brackets (<<char left-char) center (<<char right-char)))
-
 
 
 ;;; VALUE PARSERS. The following section contains utilities for parsing common

@@ -1,0 +1,20 @@
+{"name" : "Boutade",
+ "languages" : [ {"lang" : "Common Lisp",
+                 "proficiency" : null,
+                 "lovesIt" : true }
+
+              , {"lang" : "Rust",
+                 "proficiency" : 0.8,
+                 "lovesIt" : true,
+                 "isAshamedToLoveIt" : true}
+
+              , {"lang" : "Haskell",
+                 "proficiency" : 0.5,
+                 "lovesIt" : "sometimes, in some ways"} 
+              ],
+  "pizzaOrder" : ["Tempeh Italian Sausage", "Spinach", "Mushrooms", "Red Pepper Flakes"],
+  "isCool" : false,
+  "isFunny" : false,
+  "thinksPeopleAreLaughing" : true,
+  "beHonest_thinksPeopleAreLaughing" : false
+}
