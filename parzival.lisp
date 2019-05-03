@@ -335,20 +335,6 @@ the character C."
                 (<<map-cons result (<<* parser))))))
 
 
-  ;; (lambda (stream)
-  ;;   (let ((result nil)
-  ;;         (parser (<<~ parser)))
-  ;;     (labels ((rec (stream)
-  ;;                (multiple-value-bind
-  ;;                      (res ok? stream2) (funcall parser stream)
-  ;;                  (if ok?
-  ;;                      (progn
-  ;;                        (push res result)
-  ;;                        (rec stream2))
-  ;;                      (values (nreverse result) t stream2)))))
-  ;;       (rec stream)))))
-
-
 (defun <<+ (parser)
   "Like <<* but fails if P does not succeed at least once."
   (<<cons parser (<<* parser)))
@@ -386,7 +372,6 @@ the character C."
   (<<cons value-parser (<<* (<<and separator-parser value-parser))))
 
 
-
 (defun <<brackets (left center right)
   (<<and left (<<bind center
                       (lambda (bracketed-value)
@@ -399,6 +384,7 @@ the character C."
 
 ;;; VALUE PARSERS. The following section contains utilities for parsing common
 ;;; values like strings or numbers.
+
 
 (defun <<string (str)
   "Parses exactly the string STR, resulting in STR on success."
@@ -421,9 +407,11 @@ the character C."
 (<<def <whitespace< (<<* (<<or <space< <newline< <return< <linefeed< <tab<))
        "Parses zero or more whitespace characters, returning them as a list")
 
+
 (<<def <word< (<<to-string (<<+ <letter<))
         "Parses a sequence of one or more letters characters, resulting in
         a string containing them.")
+
 
 (defun read-from-char-list (l)
   (read-from-string (concatenate 'string l)))
@@ -449,7 +437,6 @@ the character C."
                               (<<+ <digit<))))
              (<<result 0))
        "Parses a fractional number in decimal format - e.g. .3234 or .002")
-
 
 
 (<<def <real<

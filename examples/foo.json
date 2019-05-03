@@ -1,20 +1,42 @@
-{"name" : "Boutade",
- "languages" : [ {"lang" : "Common Lisp",
-                 "proficiency" : null,
-                 "lovesIt" : true }
+[
+    {"name" : "Boutade",
+     "languages" : [ {"lang" : "Common Lisp",
+                      "proficiency" : null,
+                      "lovesIt" : true }
 
-              , {"lang" : "Rust",
-                 "proficiency" : 0.8,
-                 "lovesIt" : true,
-                 "isAshamedToLoveIt" : true}
+                     , {"lang" : "Rust",
+                        "proficiency" : 0.8,
+                        "lovesIt" : true,
+                        "isAshamedToLoveIt" : true}
 
-              , {"lang" : "Haskell",
-                 "proficiency" : 0.5,
-                 "lovesIt" : "sometimes, in some ways"} 
-              ],
-  "pizzaOrder" : ["Tempeh Italian Sausage", "Spinach", "Mushrooms", "Red Pepper Flakes"],
-  "isCool" : false,
-  "isFunny" : false,
-  "thinksPeopleAreLaughing" : true,
-  "beHonest_thinksPeopleAreLaughing" : false
-}
+                     , {"lang" : "Haskell",
+                        "proficiency" : 0.5,
+                        "lovesIt" : "sometimes, in some ways"} 
+                   ],
+     "pizzaOrder" : ["Tempeh Italian Sausage", "Spinach", "Mushrooms", "Red Pepper Flakes"],
+     "isCool" : false,
+     "isFunny" : false,
+     "thinksPeopleAreLaughing" : true,
+     "beHonest_thinksPeopleAreLaughing" : false
+    },
+    {"name" : "Goofist",
+     "languages" : [ {"lang" : "Common Lisp",
+                      "proficiency" : ["over", 9000],
+                      "lovesIt" : true }
+
+                     , {"lang" : "Rust",
+                        "proficiency" : -1,
+                        "lovesIt" : true,
+                        "isAshamedToLoveIt" : true}
+
+                     , {"lang" : "Haskell",
+                        "proficiency" : -1,
+                        "lovesIt" : "i cannot tell a lie"} 
+                   ],
+     "pizzaOrder" : ["Blue Stilton", "Walnuts", "Pork Sausage", "Apple Slices"],
+     "isCool" : true,
+     "isFunny" : true,
+     "thinksPeopleAreLaughing" : true,
+     "beHonest_thinksPeopleAreLaughing" : true
+    }
+]
