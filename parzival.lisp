@@ -120,12 +120,20 @@ in then. If the parse fails the combinator else is run instead."
               parser2)))))
 
 ;; I thin i see... checkpoints to the same point are being removed when they should't be
-(defun <<or (parser1 parser2 &rest parsers)
+;;(defun <<or (parser1 parser2 &rest parsers)
+(defun <<or (&rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
 failure, and resulting in the first successful parse."
-  (if parsers
-      (<<plus parser1 (apply #'<<or (cons parser2 parsers)))
-      (<<plus parser1 parser2)))
+  (cond ((null parsers) <fail<)
+        ((null (cdr parsers)) (car parsers))
+        (t
+         (<<plus (car parsers) (apply #'<<or (cdr parsers))))))
+
+
+
+  ;; (if parsers
+  ;;     (<<plus parser1 (apply #'<<or (cons parser2 parsers)))
+  ;;     (<<plus parser1 parser2)))
 
 
 (defun <<~ (parser)
