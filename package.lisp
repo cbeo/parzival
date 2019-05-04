@@ -55,6 +55,7 @@
    #:<<map-list
    #:<<map-append
    #:<<cons
+   #:<<list
    #:<<*
    #:<<+
    #:<<times
