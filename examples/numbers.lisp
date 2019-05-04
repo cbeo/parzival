@@ -117,12 +117,15 @@
 
 
 (defun natural-language-calc ()
+  (format t "Hello! And Welcome To the Super Practical Natural Language Calculator!~%~%")
+  (format t "Type quit to quit~%")
+  (format t "> ")
   (loop named goof-calc
         for line = (read-line)
         do
         (if (equal line "quit")
             (return-from goof-calc "OK")
-            (let ((parsed (parse line <calc< t)))
+            (let ((parsed (parse (string-downcase line) <calc< t)))
               (if parsed
                   (format t "EQUALS ~R~%> " parsed)
                   (format t "No no no.. all wrong...~%> "))))))
