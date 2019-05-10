@@ -1,12 +1,12 @@
 ;;;; parzival.asd
 
 (asdf:defsystem #:parzival
-  :description "An embedded langauage for nearly monadic stream parser combinators."
+  :description "Streaming parser language in Common Lisp."
   :author "Boutade <thegoofist@protonmail.com>"
   :license  "GPLv3"
-  :version "0.0.1"
+  :version "0.0.2"
   :serial t
-  :depends-on (#:replay-streams #:prove)
+  :depends-on (#:replay-streams)
   :components ((:file "package")
-               (:file "parzival")
-               (:file "tests")))
+               (:file "parzival")))
+
