@@ -119,26 +119,17 @@ in then. If the parse fails the combinator else is run instead."
               (rewind-to stream chkpt)
               parser2)))))
 
-;; I thin i see... checkpoints to the same point are being removed when they should't be
-;;(defun <<or (parser1 parser2 &rest parsers)
 (defun <<or (&rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
-failure, and resulting in the first successful parse."
+   failure, and resulting in the first successful parse."
   (cond ((null parsers) <fail<)
         ((null (cdr parsers)) (car parsers))
         (t
          (<<plus (car parsers) (apply #'<<or (cdr parsers))))))
 
-
-
-  ;; (if parsers
-  ;;     (<<plus parser1 (apply #'<<or (cons parser2 parsers)))
-  ;;     (<<plus parser1 parser2)))
-
-
 (defun <<~ (parser)
   "Turns a parser into a rewinding parser. I.e. If the PARSER would fail, then
-the input stream is first rewound before the fail occurrs."
+   the input stream is first rewound before the fail occurrs."
   (<<plus parser <fail<))
 
 
@@ -146,6 +137,16 @@ the input stream is first rewound before the fail occurrs."
   "Makes a parser optional. I.e. if the PARSER would fail, it instead succeeds
   with NIL and the input stream is rewound."
   (<<plus parser (<<result nil)))
+
+
+(defun <<any-char (str)
+  "Makes a parser that accepts and results in any of the characters in the
+  provided string"
+  (apply #'<<or (loop for c across str collect (<<char c))))
+
+(defun <<any-string (&rest strings)
+  "Makes a parser that accepts and results in any of the provided strings"
+  (apply #'<<or (mapcar #'<<string strings)))
 
 
 ;;; <<BIND LETS US CHAIN PARSERS together in different ways. Fundamentally, the
@@ -163,13 +164,14 @@ the input stream is first rewound before the fail occurrs."
             (funcall fn result))))
 
 
-(defun <<and-then (parser fn &rest fns)
-  "Just like bind but with a chain of functions. Each function accepts the
-  result of the parse from the previous step and returns a new parser. If any
-  intermediate parser fails, the whole chain fails."
-  (if fns
-      (apply #'<<and-then (cons (<<bind parser fn) fns))
-      (<<bind parser fn)))
+(defmacro <<let* (bindings expression)
+  "Chain the results of several parses, failing whenever any of them fail, and
+   combine them in a final parser. BINDINGS is a list of (variable parser)
+   pairs.  EXPRESSION should return a parser"
+  (if (null bindings) expression
+      `(<<bind ,(cadar bindings)
+               (lambda (,(caar bindings))
+                 (<<let* ,(cdr bindings) ,expression)))))
 
 
 (defun <<and (parser1 parser2 &rest parsers)
@@ -396,15 +398,24 @@ the character C."
 
 (defun <<string (str)
   "Parses exactly the string STR, resulting in STR on success."
-  (<<map (returning str)
-         (apply #'<<and (loop for c across str collect (<<~char c)))))
+  (cond ((zerop (length str))
+         (<<result nil))
+        ((= 1 (length str))
+         (<<~char (aref str 0)))
+        (t 
+         (<<map (returning str)
+                (apply #'<<and (loop for c across str collect (<<~char c)))))))
 
 
 (defun <<~string (str)
   "Parses exactly the string STR, resulting in STR. Rewinding version."
-  (<<map (returning str)
-         (<<~ (apply #'<<and (loop for c across str collect (<<char c))))))
-
+  (cond ((zerop (length str))
+         (<<result nil))
+        ((= 1 (length str))
+         (<<~char (aref str 0)))
+        (t
+         (<<map (returning str)
+                (<<~ (apply #'<<and (loop for c across str collect (<<char c))))))))
 
 (defun <<to-string (parser)
   "If the result of PARSER is a list of characters, transform it into a string.
