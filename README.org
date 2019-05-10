@@ -1,10 +1,57 @@
 
-
-I'm still stabilizing the library. Eventually aims to be your go-to slick
-embeded language for writing stream parsers.
-
 * parzival
-
   
+  The quest of =parzival= is to make it fun and easy to build parsers that
+  return common lisp values. E.g. A JSON parser or an HTTP parser could both be
+  written extremely succinctly in parzival.
 
-  An errant knight, a holy fool, exploring the stream for the holy =<fail<=. 
+  In =parzival=, a *parser is a function* that accepts a *stream* and returns
+  three values:
+  
+  1. A parse result (or =nil=)
+  2. An indication that the parse succeeded or failed ( =t= or =nil= )
+  3. The stream that was initially passed in.
+
+** A neat example
+
+  What follows is a quick example for parsing arithemtic expressions. But first,
+  you should be aware of two *completely optional* naming conventions that
+  =parzival= adopts.
+  
+  1. Names beginning and ending in a =<= are *parsers*.
+  2. Names that begin with =<<= are *parser-combinators*, i.e. functions that
+     accept and return parsers.
+  
+#+begin_src lisp
+
+;;; we want to parse + - / or * and result in a function that can be used do arithmetic on numbers
+
+(defvar <op<  
+  (<<bind (<<any-char "+-*/")
+          (lambda (op-char)
+            (<<result
+              (case op-char
+                (#\+ #'+)
+                (#\- #'-)
+                (#\* #'*)
+                (t #'/))))))
+
+
+(defvar <simple-expression<
+   (<<let* ((arg1 <real<)
+            (op <op<)
+            (arg2 <real<))
+       (<<result (funcall op arg1 arg2))))
+
+
+#+end_src
+
+The above is "good enough" to parse simple expressions like "44.32+55" or
+"88/11". E.g.
+
+#+begin_src lisp
+
+(parse "44.3*3" <simple-expression< t)   ;; 132.9
+
+#+end_src
+
