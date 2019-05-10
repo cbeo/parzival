@@ -165,9 +165,10 @@ in then. If the parse fails the combinator else is run instead."
 
 
 (defmacro <<let (bindings expression)
-  "Chain the results of several parses, failing whenever any of them fail, and
-   combine them in a final parser. BINDINGS is a list of (variable parser)
-   pairs.  EXPRESSION should return a parser"
+  "Introduce bindings for the results of several consequtive parses. If one of
+  them fails then the whole expression fails. BINDINGS should be analogus to a
+  let expression, i.e. (variable parser) pairs. EXPRESSION should be any
+  expression that returns a parser - it can make use of the bound variables"
   (if (null bindings) expression
       `(<<bind ,(cadar bindings)
                (lambda (,(caar bindings))

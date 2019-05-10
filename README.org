@@ -2,21 +2,21 @@
 * parzival
   
   The quest of =parzival= is to make it fun and easy to build parsers that
-  return common lisp values. E.g. A JSON parser or an HTTP parser could both be
-  written extremely succinctly in parzival.
+  consume streams and return common lisp values. E.g. A JSON parser or an HTTP
+  parser could both be written extremely succinctly in parzival.
 
   In =parzival=, a *parser is a function* that accepts a *stream* and returns
   three values:
   
-  1. A parse result (or =nil=)
-  2. An indication that the parse succeeded or failed ( =t= or =nil= )
-  3. The stream that was initially passed in.
+  1. A *parse result* (or =nil=), which is any value.
+  2. A *success indicator*, which is =t= or =nil=.
+  3. The possibly modified *stream* that was initially passed in.
 
 ** A neat example
 
-  What follows is a quick example for parsing arithemtic expressions. But first,
-  you should be aware of two *completely optional* naming conventions that
-  =parzival= adopts.
+  What follows is a quick example of using =parzival= to build a parser for
+  simple arithmetic expressions. But first, you should be aware of two
+  *completely optional* naming conventions that =parzival= adopts.
   
   1. Names beginning and ending in a =<= are *parsers*.
   2. Names that begin with =<<= are *parser-combinators*, i.e. functions that
@@ -27,7 +27,7 @@
 ;;; we want to parse + - / or * and result in a function that can be used do arithmetic on numbers
 
 (defvar <op<  
-  (<<bind (<<any-char "+-*/")
+  (<<bind (<<brackets <whitespace< (<<any-char "+-*/") <whitespace<)
           (lambda (op-char)
             (<<result
               (case op-char
@@ -46,12 +46,18 @@
 
 #+end_src
 
-The above is "good enough" to parse simple expressions like "44.32+55" or
-"88/11". E.g.
+The above is "good enough" to parse simple expressions like "44.32 + 55" or
+"88 / 11.11". E.g.
 
 #+begin_src lisp
 
-(parse "44.3*3" <simple-expression< t)   ;; 132.9
+(parse "44.3 * 3" <simple-expression< t)   ;; 132.9
 
 #+end_src
 
+** [0/4] To Do
+
+   1) [ ] Signal Conditions on Parse Failures from =parse= function
+   2) [ ] Related to (1), provide prettying-printing options for parse failures
+   3) [ ] Extend to support Binary stream parsers. 
+   4) [ ] Complete Test Coverage  
