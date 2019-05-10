@@ -164,14 +164,14 @@ in then. If the parse fails the combinator else is run instead."
             (funcall fn result))))
 
 
-(defmacro <<let* (bindings expression)
+(defmacro <<let (bindings expression)
   "Chain the results of several parses, failing whenever any of them fail, and
    combine them in a final parser. BINDINGS is a list of (variable parser)
    pairs.  EXPRESSION should return a parser"
   (if (null bindings) expression
       `(<<bind ,(cadar bindings)
                (lambda (,(caar bindings))
-                 (<<let* ,(cdr bindings) ,expression)))))
+                 (<<let ,(cdr bindings) ,expression)))))
 
 
 (defun <<and (parser1 parser2 &rest parsers)

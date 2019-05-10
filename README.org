@@ -38,7 +38,7 @@
 
 
 (defvar <simple-expression<
-   (<<let* ((arg1 <real<)
+   (<<let ((arg1 <real<)
             (op <op<)
             (arg2 <real<))
        (<<result (funcall op arg1 arg2))))
