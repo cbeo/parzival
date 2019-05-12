@@ -15,6 +15,8 @@
    #:<<or
    #:<<~
    #:<<?
+   #:<<any-char
+   #:<<any-string
    #:<<~def
    #:<<bind
    #:<<let
