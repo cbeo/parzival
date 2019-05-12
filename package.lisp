@@ -17,7 +17,7 @@
    #:<<?
    #:<<~def
    #:<<bind
-   #:<<and-then
+   #:<<let
    #:<<and
    #:<<ending
    #:<<sat
