@@ -2,7 +2,7 @@
 * parzival
   
   The quest of =parzival= is to make it fun and easy to build parsers that
-  consume streams and return common lisp values. E.g. A JSON parser or an HTTP
+  consume streams and return common lisp values. E.g. A [JSON](https://github.com/thegoofist/parzival/blob/master/examples/json-parzival.lisp) parser or an HTTP
   parser could both be written extremely succinctly in parzival.
 
   In =parzival=, a *parser is a function* that accepts a *stream* and returns
