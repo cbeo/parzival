@@ -43,8 +43,8 @@
 
 (defmacro <<def (name parser &optional docstring)
   `(progn
-     (defvar ,name ,parser)
-     (defun ,name (stream) ,docstring (funcall ,name stream))))
+     (defvar ,name ',name)
+     (defun ,name (stream) ,docstring (funcall ,parser stream))))
 
 
 ;;; The CORE PARSERS out of which all other parsers are built! A most solemn

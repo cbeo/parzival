@@ -4,6 +4,7 @@
   (:use #:cl #:replay-streams)
   (:export
    #:parse
+   #:<<def
    #:<<result
    #:<fail<
    #:<peek<
