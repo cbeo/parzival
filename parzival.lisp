@@ -176,12 +176,22 @@ in then. If the parse fails the combinator else is run instead."
 
 
 (defun <<and (parser1 parser2 &rest parsers)
-  "Just like <<AND-THEN but where parse results are ignored. I.e. Applies each
+  "Just like <<BIND but where parse results are ignored. I.e. Applies each
    parser in sequence, ignoring any intermediate results. The result (<<AND P1
    P2 ... PN) is the result of PN."
   (if parsers
       (apply #'<<and (cons (<<bind parser1 (returning parser2)) parsers))
       (<<bind parser1 (returning parser2))))
+
+
+(defun <<first (parser other &rest others-still)
+  "A bit like <<AND in reverse. Returns the parse result of the first parser,
+   but only if the other parsers all succeed."
+  (<<bind parser
+          (lambda (first)
+            (apply #'<<and (append (list other)
+                                   others-still
+                                   (list (<<result first)))))))
 
 
 (defun <<ending (parser)

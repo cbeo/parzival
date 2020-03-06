@@ -22,6 +22,7 @@
    #:<<bind
    #:<<let
    #:<<and
+   #:<<first
    #:<<ending
    #:<<sat
    #:<<~sat
