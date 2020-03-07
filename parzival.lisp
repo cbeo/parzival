@@ -123,21 +123,34 @@ in then. If the parse fails the combinator else is run instead."
   "Consumes the stream one character at a time until PARSER succeeds. The parse
   value of (<<UNTIL PARSER) is a list of the characters consumed, ending in the
   value parsed by PARSER."
-  (lambda (stream)
-    (let ((collected nil))
-      (labels ((rec (stream)
-                 (let ((chkpt (replay-streams:checkpoint stream)))
-                   (<<if (result parser stream)
-                         (progn
-                           (replay-streams:free-checkpoint stream chkpt)
-                           (<<result (reverse (cons result collected))))
-                         (progn
-                           (replay-streams:rewind-to stream chkpt)
-                           (<<bind <item<
-                                   (lambda (item)
-                                     (push item collected)
-                                     #'rec)))))))
-        (rec stream)))))
+  (let ((collected nil))
+    (labels ((rec (stream)
+               (let ((chkpt (replay-streams:checkpoint stream)))
+                 (<<if (result parser stream)
+                       (progn
+                         (replay-streams:free-checkpoint stream chkpt)
+                         (<<result (reverse (cons result collected))))
+                       (progn
+                         (replay-streams:rewind-to stream chkpt)
+                         (<<bind <item<
+                                 (lambda (item)
+                                   (push item collected)
+                                   #'rec)))))))
+      #'rec)))
+
+(defun <<ignore-until (parser)
+  "Just like <<UNTIL except it does not build up intermediate results. Results
+   in the result of PARSER."
+  (labels ((rec (stream)
+                (let ((chkpt (checkpoint stream)))
+                  (<<if (result parser stream)
+                        (progn
+                          (free-checkpoint stream chkpt)
+                          (<<result result))
+                        (progn
+                          (rewind-to stream chkpt)
+                          (<<and <item< #'rec))))))
+          #'rec))
 
 (defun <<or (&rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each

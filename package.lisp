@@ -14,6 +14,7 @@
    #:<<when
    #:<<plus
    #:<<until
+   #:<<ignore-until
    #:<<or
    #:<<~
    #:<<?
