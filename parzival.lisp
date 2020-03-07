@@ -119,6 +119,26 @@ in then. If the parse fails the combinator else is run instead."
               (rewind-to stream chkpt)
               parser2)))))
 
+(defun <<until (parser)
+  "Consumes the stream one character at a time until PARSER succeeds. The parse
+  value of (<<UNTIL PARSER) is a list of the characters consumed, ending in the
+  value parsed by PARSER."
+  (lambda (stream)
+    (let ((collected nil))
+      (labels ((rec (stream)
+                 (let ((chkpt (replay-streams:checkpoint stream)))
+                   (<<if (result parser stream)
+                         (progn
+                           (replay-streams:free-checkpoint stream chkpt)
+                           (<<result (reverse (cons result collected))))
+                         (progn
+                           (replay-streams:rewind-to stream chkpt)
+                           (<<bind <item<
+                                   (lambda (item)
+                                     (push item collected)
+                                     #'rec)))))))
+        (rec stream)))))
+
 (defun <<or (&rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
    failure, and resulting in the first successful parse."
@@ -199,7 +219,6 @@ in then. If the parse fails the combinator else is run instead."
   (<<bind parser
           (lambda (result)
             (<<map (returning result) <eof<))))
-
 
 ;;; PARSING INDIVIDUAL ITEMS from the stream. The basic parser thats of any real
 ;;; use is <<sat. It lets you check that a stream item meets some kind of
