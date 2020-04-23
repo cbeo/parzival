@@ -8,7 +8,7 @@
   In =parzival=, a *parser is a function* that accepts a *stream* and returns
   three values:
   
-  1. A *parse result* (or =nil=), which is any value.
+  1. A *parse result*, which is any value.
   2. A *success indicator*, which is =t= or =nil=.
   3. The possibly modified *stream* that was initially passed in.
 

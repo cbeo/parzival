@@ -152,6 +152,14 @@ in then. If the parse fails the combinator else is run instead."
                           (<<and <item< #'rec))))))
           #'rec))
 
+(defun <<filter (parser pred)
+  "Condition a successful parse on a predicate"
+  (<<bind parser
+          (lambda (parsed)
+            (if (funcall pred parsed)
+                (<<result parsed)
+                <fail<))))
+
 (defun <<or (&rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
    failure, and resulting in the first successful parse."
@@ -425,6 +433,10 @@ the character C."
   (<<cons value-parser (<<* (<<and separator-parser value-parser))))
 
 
+(defun <<sep-by* (value-parser separator-parser)
+  "Just like <<SEP-BY, but matches an empty sequence"
+  (<<? (<<sep-by value-parser separator-parser)))
+
 (defun <<brackets (left center right)
   (<<and left (<<bind center
                       (lambda (bracketed-value)
@@ -525,3 +537,4 @@ the character C."
 (defun returning (x)
   "Returns a lambda that returns x no matter what it gets as an argument"
   (lambda (ignore) x))
+

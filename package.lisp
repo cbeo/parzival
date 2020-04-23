@@ -16,6 +16,7 @@
    #:<<until
    #:<<ignore-until
    #:<<or
+   #:<<filter
    #:<<~
    #:<<?
    #:<<any-char
@@ -68,6 +69,7 @@
    #:<<min-times
    #:<<max-times
    #:<<sep-by
+   #:<<sep-by*
    #:<<brackets
    #:<<char-brackets
    #:<<string
