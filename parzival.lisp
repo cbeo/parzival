@@ -30,6 +30,7 @@
 
 ;;; The PARSE function. Runs parsers.
 
+
 ;; TODO refactor parse to detect how best to create a replay stream, automatically
 (defun parse (stream parser &optional string-as-stream-p)
   "Parse STREAM with PARSER. If STRING-AS-STREAM-P then STREAM can be a string."
