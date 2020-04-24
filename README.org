@@ -19,8 +19,8 @@
   *completely optional* naming conventions that =parzival= adopts.
   
   1. Names beginning and ending in a =<= are *parsers*.
-  2. Names that begin with =<<= are *parser-combinators*, i.e. functions that
-     accept and return parsers.
+  2. Names that begin with =<<= are *higher-order functions* that accept
+     or return parsers.
   
 #+begin_src lisp
 
@@ -70,9 +70,9 @@ PARZIVAL-USER> T
 
 #+end_src
 
-In the last example the string ="foozball"= is not a real, so the
-parse fails, resultin in nil.  You can examine the third return value
-to see where in the input stream the parse failed. 
+In the last example the string ="foozball"= does not represent a real
+number, and hence, the parse fails.  You can examine the third return
+value to see where in the input stream the parse failed.
 
 ** An Extended Silly Example
 
@@ -117,7 +117,7 @@ PARZIVAL-NUMBERS>
 
 (ta-dah)
 
-*** the code
+*** The Code
 
 
  #+BEGIN_SRC lisp
