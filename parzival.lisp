@@ -210,10 +210,18 @@ in then. If the parse fails the combinator else is run instead."
   "Introduce bindings for the results of several consequtive parses. If one of
   them fails then the whole expression fails. BINDINGS should be analogus to a
   let expression, i.e. (variable parser) pairs. EXPRESSION should be any
-  expression that returns a parser - it can make use of the bound variables"
+  expression that returns a parser - it can make use of the bound variables.
+
+  Any binding variable whose SYMBOL-NAME starts with an underscore is declared
+  as IGNORE. This is handy if you want to run a parser in sequence but don't 
+  care about its result value - you can binding to a variable like _VAR and the
+  compiler won't complain.
+  "
   (if (null bindings) expression
       `(<<bind ,(cadar bindings)
                (lambda (,(caar bindings))
+                 ,(when (ignorable-symbol-p (caar bindings))
+                    (list 'declare (list 'ignore (caar bindings))))
                  (<<let ,(cdr bindings) ,expression)))))
 
 
@@ -539,3 +547,7 @@ the character C."
   "Returns a lambda that returns x no matter what it gets as an argument"
   (lambda (ignore) x))
 
+
+(defun ignorable-symbol-p (symb)
+  "Returns true if a symbol name starts with _"
+  (eql #\_ (elt (symbol-name symb) 0)))
