@@ -1,13 +1,13 @@
 
-(defpackage "parzival-numbers"
+(defpackage :parzival-numbers
   (:use :cl :parzival))
 
-(in-package "parzival-numbers")
+(in-package :parzival-numbers)
 
 (defun <<map-to (parser value)
   (<<map (lambda (x) value) parser))
 
-(defvar <ones<
+(<<def <ones<
   (<<or (<<map-to (<<string "one") 1)
         (<<map-to (<<string "two") 2)
         (<<map-to (<<string "three") 3)
@@ -18,7 +18,7 @@
         (<<map-to (<<string "eight") 8)
         (<<map-to (<<string "nine") 9)))
 
-(defvar <teens<
+(<<def <teens<
   (<<or (<<map-to (<<string "ten") 10)
         (<<map-to (<<string "eleven") 11)
         (<<map-to (<<string "twelve") 12)
@@ -30,7 +30,7 @@
         (<<map-to (<<string "eighteen") 18)
         (<<map-to (<<string "nineteen") 19)))
 
-(defvar <tens<
+(<<def <tens<
   (<<or (<<map-to (<<string "twenty") 20)
         (<<map-to (<<string "thirty") 30)
         (<<map-to (<<string "forty") 40)
@@ -40,29 +40,29 @@
         (<<map-to (<<string "eighty") 80)
         (<<map-to (<<string "ninety") 90)))
 
-(defvar <20-to-99<
+(<<def <20-to-99<
   (<<bind <tens<
           (lambda (tens)
             (<<map (lambda (ones) (+ tens ones))
                    (<<and (<<char #\-) <ones<)))))
 
-(defvar <1-to-99<
+(<<def <1-to-99<
   (<<or <20-to-99< <tens< <teens< <ones<))
 
 
-(defvar <one-hundreds<
+(<<def <one-hundreds<
   (<<bind <ones<
           (lambda (num)
             (<<map (lambda (ignore) (* num 100))
                    (<<and (<<+ <space<) (<<string "hundred"))))))
 
-(defvar <in-hundreds<
+(<<def <in-hundreds<
   (<<bind <one-hundreds<
           (lambda (hundreds)
             (<<map (lambda (num) (+ hundreds num))
                    (<<and (<<+ <space<) <1-to-99<)))))
 
-(defvar <all-hundreds<
+(<<def <all-hundreds<
   (<<plus <in-hundreds< <one-hundreds<))
 
 
@@ -72,18 +72,18 @@
             (<<map (lambda (ignore) (* val factor))
                    (<<and (<<+ <space<) (<<string name))))))
 
-(defvar <thousands< (<<magnitude-order "thousand" 1000))
+(<<def <thousands< (<<magnitude-order "thousand" 1000))
 
 
-(defvar <millions< (<<magnitude-order "million" 1000000))
+(<<def <millions< (<<magnitude-order "million" 1000000))
 
-(defvar <billions< (<<magnitude-order "billion" 1000000000))
+(<<def <billions< (<<magnitude-order "billion" 1000000000))
 
-(defvar <trillions< (<<magnitude-order "trillion" 1000000000000))
+(<<def <trillions< (<<magnitude-order "trillion" 1000000000000))
 
-(defvar <quadrillions< (<<magnitude-order "quadrillion" 1000000000000000))
+(<<def <quadrillions< (<<magnitude-order "quadrillion" 1000000000000000))
 
-(defvar <number<
+(<<def <number<
   (<<map (lambda (ls) (apply #'+ ls))
          (apply #'parzival::<<list
                 (mapcar (lambda (p) (<<or (<<strip p) (<<result 0)))
@@ -98,20 +98,25 @@
 
 
 ;; three plus forty-seven thousand plus two hundred million sixty-five
-(defun <calc< (stream)
-  (funcall <calc< stream))
 
-(defvar <op< (<<strip (<<or (<<string "plus")
-                            (<<string "minus"))))
+(<<def <op< (<<strip (<<or (<<string "plus")
+                           (<<string "minus")
+                           (<<string "times")
+                           (<<string "over"))))
 
-(defvar <calc<
+(<<def <calc<
   (<<plus
    (<<bind <number<
            (lambda (number)
              (<<map (lambda (op-calc)
-                      (if (equal (car op-calc) "plus")
-                          (+ number (cdr op-calc))
-                          (- number (cdr op-calc))))
+                      (cond ((equal (car op-calc) "plus")
+                             (+ number (cdr op-calc)))
+                            ((equal (car op-calc) "minus")
+                             (- number (cdr op-calc)))
+                            ((equal (car op-calc) "times")
+                             (* number (cdr op-calc)))
+                            ((equal (car op-calc) "over")
+                             (round (/ number (cdr op-calc))))))
                     (<<cons <op< #'<calc<))))
    <number<))
 

@@ -12,7 +12,7 @@
   2. A *success indicator*, which is =t= or =nil=.
   3. The possibly modified *stream* that was initially passed in.
 
-** A neat example
+** A Neat Example
 
   What follows is a quick example of using =parzival= to build a parser for
   simple arithmetic expressions. But first, you should be aware of two
@@ -24,24 +24,28 @@
   
 #+begin_src lisp
 
-;;; we want to parse + - / or * and result in a function that can be used do arithmetic on numbers
+  (defpackage :parzival-user (:use :cl :parzival))
+  (in-package :parzival-user)
+  ;; we want to parse + - / or * and result in a function that can be
+  ;; used do arithmetic on numbers
+  (<<def <op<  
+         (<<bind (<<strip (<<any-char "+-*/"))
+                 (lambda (op-char)
+                   (<<result
+                    (case op-char
+                      (#\+ #'+)
+                      (#\- #'-)
+                      (#\* #'*)
+                      (t #'/))))))
 
-(defvar <op<  
-  (<<bind (<<brackets <whitespace< (<<any-char "+-*/") <whitespace<)
-          (lambda (op-char)
-            (<<result
-              (case op-char
-                (#\+ #'+)
-                (#\- #'-)
-                (#\* #'*)
-                (t #'/))))))
 
-
-(defvar <simple-expression<
-   (<<let ((arg1 <real<)
-            (op <op<)
-            (arg2 <real<))
-       (<<result (funcall op arg1 arg2))))
+  ;; parse a two real numbers separated by a valid operator
+  ;; result in the operator applied to the numbers
+  (<<def <simple-expression<
+         (<<let ((arg1 (<<strip <real<))
+                 (op <op<)
+                 (arg2 (<<strip <real<)))
+                (<<result (funcall op arg1 arg2))))
 
 
 #+end_src
@@ -50,10 +54,211 @@ The above is "good enough" to parse simple expressions like "44.32 + 55" or
 "88 / 11.11". E.g.
 
 #+begin_src lisp
-
-(parse "44.3 * 3" <simple-expression< t)   ;; 132.9
+PARZIVAL-USER> (parse "33 * 2.5" <simple-expression< t)
+82.5
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1003B1BBB3}>
+PARZIVAL-USER> (parse "331 / 2.5" <simple-expression< t)
+132.4
+T
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1003BE0753}>
+PARZIVAL-USER> (parse "foozball / 2.5" <simple-expression< t)
+NIL
+NIL
+#<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1003C024E3}>
+PARZIVAL-USER> T
 
 #+end_src
+
+In the last example the string ="foozball"= is not a real, so the
+parse fails, resultin in nil.  You can examine the third return value
+to see where in the input stream the parse failed. 
+
+** An Extended Silly Example
+
+The code for this example is a little long winded, so for the
+impatient I present below the grand payoff. 
+
+What we have here is a natural language calculator.  It computes
+addition, subtraction, multipication, and division with all the
+convenience of typing out numbers without the cumbersome use of
+digits!
+
+Here is a REPL session
+
+#+BEGIN_SRC
+
+PARZIVAL-NUMBERS> (natural-language-calc)
+Hello! And Welcome To the Super Practical Natural Language Calculator!
+
+Type quit to quit
+
+> one hundred minus eight
+EQUALS ninety-two
+
+> twenty-nine plus four hundred seventy-seven
+EQUALS five hundred six
+
+> twenty over four
+EQUALS five
+
+> twenty-one times sixteen
+EQUALS three hundred thirty-six
+
+> four thousand nine hundred fifty-five times two hundred seventeen
+EQUALS one million seventy-five thousand two hundred thirty-five
+
+> quit
+
+"OK"
+
+PARZIVAL-NUMBERS> 
+#+END_SRC
+
+(ta-dah)
+
+** the code
+
+
+#+BEGIN_SRC lisp
+
+(defpackage :parzival-numbers
+  (:use :cl :parzival))
+
+(in-package :parzival-numbers)
+
+(defun <<map-to (parser value)
+  (<<map (lambda (x) value) parser))
+
+(<<def <ones<
+  (<<or (<<map-to (<<string "one") 1)
+        (<<map-to (<<string "two") 2)
+        (<<map-to (<<string "three") 3)
+        (<<map-to (<<string "four") 4)
+        (<<map-to (<<string "five") 5)
+        (<<map-to (<<string "six") 6)
+        (<<map-to (<<string "seven") 7)
+        (<<map-to (<<string "eight") 8)
+        (<<map-to (<<string "nine") 9)))
+
+(<<def <teens<
+  (<<or (<<map-to (<<string "ten") 10)
+        (<<map-to (<<string "eleven") 11)
+        (<<map-to (<<string "twelve") 12)
+        (<<map-to (<<string "thirteen") 13)
+        (<<map-to (<<string "fourteen") 14)
+        (<<map-to (<<string "fifteen") 15)
+        (<<map-to (<<string "sixteen") 16)
+        (<<map-to (<<string "seventeen") 17)
+        (<<map-to (<<string "eighteen") 18)
+        (<<map-to (<<string "nineteen") 19)))
+
+(<<def <tens<
+  (<<or (<<map-to (<<string "twenty") 20)
+        (<<map-to (<<string "thirty") 30)
+        (<<map-to (<<string "forty") 40)
+        (<<map-to (<<string "fifty") 50)
+        (<<map-to (<<string "sixty") 60)
+        (<<map-to (<<string "seventy") 70)
+        (<<map-to (<<string "eighty") 80)
+        (<<map-to (<<string "ninety") 90)))
+
+(<<def <20-to-99<
+  (<<bind <tens<
+          (lambda (tens)
+            (<<map (lambda (ones) (+ tens ones))
+                   (<<and (<<char #\-) <ones<)))))
+
+(<<def <1-to-99<
+  (<<or <20-to-99< <tens< <teens< <ones<))
+
+
+(<<def <one-hundreds<
+  (<<bind <ones<
+          (lambda (num)
+            (<<map (lambda (ignore) (* num 100))
+                   (<<and (<<+ <space<) (<<string "hundred"))))))
+
+(<<def <in-hundreds<
+  (<<bind <one-hundreds<
+          (lambda (hundreds)
+            (<<map (lambda (num) (+ hundreds num))
+                   (<<and (<<+ <space<) <1-to-99<)))))
+
+(<<def <all-hundreds<
+  (<<plus <in-hundreds< <one-hundreds<))
+
+
+(defun <<magnitude-order (name factor)
+  (<<bind (<<or <all-hundreds< <1-to-99<)
+          (lambda (val)
+            (<<map (lambda (ignore) (* val factor))
+                   (<<and (<<+ <space<) (<<string name))))))
+
+(<<def <thousands< (<<magnitude-order "thousand" 1000))
+
+(<<def <millions< (<<magnitude-order "million" 1000000))
+
+(<<def <billions< (<<magnitude-order "billion" 1000000000))
+
+(<<def <trillions< (<<magnitude-order "trillion" 1000000000000))
+
+(<<def <quadrillions< (<<magnitude-order "quadrillion" 1000000000000000))
+
+(<<def <number<
+  (<<map (lambda (ls) (apply #'+ ls))
+         (apply #'parzival::<<list
+                (mapcar (lambda (p) (<<or (<<strip p) (<<result 0)))
+                        (list <quadrillions< <trillions< <billions<
+                              <millions< <thousands<
+                              <all-hundreds< <1-to-99<)))))
+
+
+(defun parse-number (str)
+  "Just for parsing numbers"
+  (parse str <number< t))
+
+
+;; three plus forty-seven thousand plus two hundred million sixty-five
+
+(<<def <op< (<<strip (<<or (<<string "plus")
+                           (<<string "minus")
+                           (<<string "times")
+                           (<<string "over"))))
+
+(<<def <calc<
+  (<<plus
+   (<<bind <number<
+           (lambda (number)
+             (<<map (lambda (op-calc)
+                      (cond ((equal (car op-calc) "plus")
+                             (+ number (cdr op-calc)))
+                            ((equal (car op-calc) "minus")
+                             (- number (cdr op-calc)))
+                            ((equal (car op-calc) "times")
+                             (* number (cdr op-calc)))
+                            ((equal (car op-calc) "over")
+                             (round (/ number (cdr op-calc))))))
+                    (<<cons <op< #'<calc<))))
+   <number<))
+
+
+(defun natural-language-calc ()
+  (format t "Hello! And Welcome To the Super Practical Natural Language Calculator!~%~%")
+  (format t "Type quit to quit~%")
+  (format t "> ")
+  (loop named goof-calc
+        for line = (read-line)
+        do
+        (if (equal line "quit")
+            (return-from goof-calc "OK")
+            (let ((parsed (parse (string-downcase line) <calc< t)))
+              (if parsed
+                  (format t "EQUALS ~R~%> " parsed)
+                  (format t "No no no.. all wrong...~%> "))))))
+
+
+#+END_SRC
 
 ** [0/4] To Do
 
