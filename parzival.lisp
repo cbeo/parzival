@@ -43,6 +43,16 @@
 ;;; letting them be called like functions too if necessary.
 
 (defmacro <<def (name parser &optional docstring)
+  "Define a parser. <<DEF will define both a DEFUN called NAME and a
+DEFVAR called name that simply holds the symbol NAME. This makes it
+easier to write recursive parsers and to combine parsers by name.
+
+PARSER is any expression that returns a parser. i.e. a function of
+accepting a REPLAY-STREAM and returning three values. The first value
+is the result of the parse, the second value is a success indicator,
+and the thrid value is the stream stream.  The stream will be left in
+whatever state it was in when the parse stopped, either successfully
+or not."
   `(progn
      (defvar ,name ',name)
      (defun ,name (stream) ,docstring (funcall ,parser stream))))
