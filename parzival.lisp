@@ -393,6 +393,11 @@ the character C."
   (append XS YS)"
   (<<map (lambda (ys) (append xs ys)) parser))
 
+
+(defun <<map-to (value parser)
+  (<<map (lambda (ignore) (declare (ignore ignore)) value)
+         parser))
+
 ;;; PARSING SEQUENCES
 
 (defun <<cons (head-parser tail-parser)
@@ -561,3 +566,6 @@ the character C."
 (defun ignorable-symbol-p (symb)
   "Returns true if a symbol name starts with _"
   (eql #\_ (elt (symbol-name symb) 0)))
+
+
+
