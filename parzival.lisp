@@ -44,10 +44,10 @@
 
 (defmacro <<def (name parser &optional docstring)
   "Define a parser. <<DEF will define both a DEFUN called NAME and a
-DEFVAR called name that simply holds the symbol NAME. This makes it
+DEFVAR called NAME that simply holds the symbol NAME. This makes it
 easier to write recursive parsers and to combine parsers by name.
 
-PARSER is any expression that returns a parser. i.e. a function of
+PARSER is any expression that returns a parser. i.e. a function
 accepting a REPLAY-STREAM and returning three values. The first value
 is the result of the parse, the second value is a success indicator,
 and the thrid value is the stream stream.  The stream will be left in
