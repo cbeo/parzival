@@ -66,7 +66,7 @@ PARZIVAL-USER> T
 
 #+end_src
 
-In the last example the string ="foozball"= does not represent a real
+In the last example the string =foozball= does not represent a real
 number, and hence, the parse fails.  You can examine the third return
 value to see where in the input stream the parse failed.
 
