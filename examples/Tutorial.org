@@ -188,7 +188,7 @@ effectively, accept the same input zero or more times, resulting in a
 list of the results from the inner parser.  
 
 If the above definition is perhaps more verbose than you would like,
-you could have instead =<<any-char=, which takes a string as an
+you could have instead used =<<any-char=, which takes a string as an
 argument and returns a parser that accepts any character in the
 string.
 
@@ -201,8 +201,8 @@ string.
 
 ** Mapping Results to =true=, =false=, and =null=
 
-Before moving on numbers, it will be instructive to first write
-parsers for the JSON values  =true=, =false=, and =null=.
+Before moving on to parsing numbers, it will be instructive to first
+write parsers for the JSON values =true=, =false=, and =null=.
 
 Here you will make use of the =<<string= and =<<map= combinators, both
 of which are used frequently.  
@@ -450,7 +450,7 @@ are in luck because =parzival= provides =<real<=.  So you need only
 concentrate on the exponential part.  That is a good place to start.
 
 The exponential part is a case insensitive =#\e= followed by a an
-optional sign and then an integer.  
+optional sign symbole and then an integer.  
 
 #+BEGIN_SRC lisp 
 
@@ -461,13 +461,13 @@ optional sign and then an integer.
 
 #+END_SRC
 
-You may be wondering why you'd only the =#\+= in the optional sign
-part.  Well that's because =<int<= already optionally parses a
-negative sign, because it parses negative integers as well as
-positives.
+You may be wondering why you only need to make the =#\+= character
+optional, and not the =#\-= sign too.  The reason is pretty
+unexciting: the =<int<= combinatory already optionally accepts a minus
+sign because it parses negative integers as well as positives.
 
-Next, you just use =<<bind= to use any exponent to scale a transformed
-real appropriately:
+Next, you just use =<<bind= to use decide whether or not to scale the
+order of magnitude of an already parsed real number:
 
 #+BEGIN_SRC lisp 
 (<<def <number<
@@ -476,7 +476,7 @@ real appropriately:
                  (<<map (lambda (exp?)
                           (if exp? (* real (expt 10 exp?))
                               real))
-                        (<<? <number-exp-part<)))))
+                        (<<? <number-exp-part<)))))  
 #+END_SRC
 
 You can now test it out in the REPL:
@@ -542,23 +542,24 @@ With strings, things start to get whacky.  The basic structure of a
 JSON string is that of a sequence of zero or more characters
 surrounded by quotation marks. Included in =parzival= are two
 combinators called =<<brackets= and =<<char-brackets=.  Both are for
-dealing with demarcated input. I.e. you want to get =TARGET= out of
-something that looks like =LEFT TARGET RIGHT=, then you use a bracket
-combinator. 
+dealing with demarcated input. I.e. When you want to get =TARGET= out
+of something that looks like =LEFT TARGET RIGHT=, then you use a
+bracket combinator.
 
 Getting hypothetical for a moment, you can already tell that the string
 parser will look something like:
 
 #+BEGIN_SRC lisp
 ;; incomplete sketch
-
 (<<char-brackets #\" (<<* <string-char<) \")
 #+END_SRC
 
 I.e. a sequence of zero or more valid characters, bracketed by
-quotation marks. But that isn't quite right. The =<<*= combinator
-results in a list of matched values, so what you actually want is to
-map the result to a string:
+quotation marks. 
+
+The above is close, but it isn't quite right. The =<<*= combinator
+results in a *list* of matched values, but what you actually want is a
+*string*.  Hence, your old friend =<<map=:
 
 #+BEGIN_SRC lisp
 (<<def <string<
@@ -567,12 +568,14 @@ map the result to a string:
 #+END_SRC
 
 Now things get hairy. The definition of =<string-char<= is slightly
-more complicated because of of *escape sequences*: some characters in
-a valid JSON string are denoted by a sequence that looks like
-=BACKSLASH CHARACTER=, and others by =BACKSLASH U HEX HEX HEX HEX=.
+more complicated than you might think it should be because of *escape
+sequences*: some characters in a valid JSON string are denoted by a
+sequence that looks like =BACKSLASH CHARACTER=, and others by a
+sequence like =BACKSLASH U HEX HEX HEX HEX=.
 
-Feel free to study the following in detail on your own. The only new
-combinators are =<<plus=, =<<times=, and =<<sat=.
+Feel free to study the definition of =<string<= in detail on your
+own. The only new combinators it uses are =<<plus=, =<<times=, and
+=<<sat=.
 
 The =<<plus= combinator is a two argument version of =<<or=. Actually
 =<<or= is defined in terms of =<<plus=.  
@@ -666,20 +669,20 @@ PZ-JSON>
 
 ** Recursive Parsers
 
-You're in the home stretch. You've defined parsers for all of the
+You're in the home stretch! You've defined parsers for all of the
 primitive value types, and now only the complex types remain.  And
-here's where you encounter a new and interesting challenge.
+here is where you encounter a new and interesting challenge.
 
-Looking at the JSON document, you notice two things. 
+Looking at the JSON definition, you notice two things.
 
-1) There is a definition for a =value=, and value can be, among other
-   things, an =object= and an =array=.
-2) The definitions for =object= and =array= are both in terms of =value=.
+1) =value=, representing any valid JSON value, is define din terms of
+   =object= and  =array=.
+2) But =object= and =array= are both defined in terms of =value=.
 
 That's right! It's time for recursive parser definitions.
 
-So, without having defined =<object<= or =<array<=, you can go and
-define =<value<=.
+So, without having defined =<object<= or =<array<=, you can still go
+ahead and define =<value<=.
 
 #+BEGIN_SRC lisp
   ;; not strictly necessary, define these to keep the compiler from
@@ -710,8 +713,8 @@ rest.  Here's how it looks:
 #+END_SRC
 
 And finally, =<object<=.  An object is a sequence of zero or more
-=STRING : VALUE=, separated by commas and whitespace, and bracketed by
-curly braces.  Again, pretty straightforward:
+=STRING : VALUE= pairs, separated by commas and whitespace, and
+bracketed by curly braces.  Again, pretty straightforward:
 
 #+BEGIN_SRC lisp 
 (<<def <object-pair<
