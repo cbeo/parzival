@@ -789,7 +789,7 @@ PZ-JSON>
 
  #+END_SRC
 
- For the moment, parsers only work on instances of [[https://github.com/cbeo][replay-streams]]. If
+ For the moment, parsers only work on instances of [[https://github.com/cbeo/replay-streams][replay-streams]]. If
  you pass raw text to the =parse= function for its =STREAM= argument,
  then you must also pass a =T= into its third optional argument
  position. Otherwise the stream is assumed to be a =replay-stream=.
