@@ -828,13 +828,8 @@ cbeo.
 
 (in-package :parzival-json)
 
-(<<def <ws<                    ; define parsers with <<def
-       (<<*                    ; zero or more, the Kleene star, reminiscent of regex
-         (<<or                 ; any of the the following
-           (<<char #\Space)    ; parse exactly one character
-           (<<char #\Linefeed)
-           (<<char #\Return)
-           (<<char #\Tab))))
+(<<def <ws<
+       (<<* (<<any-char (concatenate 'string '(#\Space #\Linefeed #\Return #\Tab)))))
 
 (<<def <true< (<<map-to t (<<string "true")))
 (<<def <false< (<<map-to nil (<<string "false")))
