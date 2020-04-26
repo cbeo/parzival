@@ -4,7 +4,7 @@
   **A Gentle Introduction**
 
   This tutorial will guide you through the process of creating a
-  modereately sophisticated parser using [[https://github.com/cbeo/parzival][parzival]], a [[https://common-lisp.net/][Common Lisp]]
+  moderately sophisticated parser using [[https://github.com/cbeo/parzival][parzival]], a [[https://common-lisp.net/][Common Lisp]]
   library for writing stream parsers using the [[https://en.wikipedia.org/wiki/Parser_combinator]["parser combinator"]]
   approach.
 
@@ -61,13 +61,13 @@
 
     It may seem like nitpicking, but these terms are used frequently
     in =parzival='s documentation and in this tutorial.  It is my hope
-    that explitily mentioning the terms here will make the tutorial
-    easer to read and understand.
+    that explicitly mentioning the terms here will make the tutorial
+    easier to read and understand.
 
 *** Naming Conventions 
 
     The =parzival= package exports a number of tragically un-lispy
-    looking symbols. You'll see things like =<<bind= and =<alpanum<=
+    looking symbols. You'll see things like =<<bind= and =<alphanum<=
     and even =<<?=. But do not despair! There is a method to this
     madness.
 
@@ -115,7 +115,7 @@
 
 (ql:quickload :parzival)
 
-;; and for convience, go ahead and define a package:
+;; and for convenience, go ahead and define a package:
 
 (defpackage :parzival-json
    (:use :cl :parzival)
@@ -138,7 +138,7 @@
 #+BEGIN_SRC lisp
 
 (<<def <ws<                    ; define parsers with <<def
-       (<<*                    ; zero or more, the Kleene star, reminiscient of regex
+       (<<*                    ; zero or more, the Kleene star, reminiscent of regex
          (<<or                 ; any of the the following
            (<<char #\Space)    ; parse exactly one character
            (<<char #\Linefeed)
@@ -169,9 +169,9 @@ PZ-JSON>
 #+END_SRC   
 
 So what is going on?  The combinators =<<char=, =<<or=, and =<<*= all
-create parsers.  The expression =(<<char #\Sapce)=, for example,
+create parsers.  The expression =(<<char #\Space)=, for example,
 creates a parser that accepts exactly one space character.  This
-parser also happens to result in exctly the space character.  
+parser also happens to result in exactly the space character.  
 
 The =<<or= combinator is called on any number of parsers as arguments
 and returns a new parser.  The new parser will accept any of the
@@ -180,7 +180,7 @@ parser that accepts any one of the whitespace characters. It works by
 trying to parse with each one of its arguments in order. When a parse
 fails, the stream is rewound to where it was before the parse started,
 and the next parser is tried. When the end of the list is reached
-without a succesful parse, the whole thing fails.
+without a successful parse, the whole thing fails.
 
 Finally the =<<*= combinator is named for the [[https://en.wikipedia.org/wiki/Kleene_star][Kleene star]].  It takes a
 single parser as an argument and returns a parser that will,
@@ -205,7 +205,7 @@ Before moving on numbers, it will be instructive to first write
 parsers for the JSON values  =true=, =false=, and =null=.
 
 Here you will make use of the =<<string= and =<<map= combinators, both
-of which are used freuently.  
+of which are used frequently.  
 
 The =<<string= combinator creates a parser that will accept exactly
 the string it was passed as its argument. Upon success, the defined
@@ -237,7 +237,7 @@ The parse resulted in failure (indicated by a second return value of
 =NIL=) because, though ="dude"= appeared in the input, it was not at
 the beginning of the stream.
 
-At this point it seems clear tha you will will want to define parsers
+At this point it seems clear that you will will want to define parsers
 that look something like this:
 
 #+BEGIN_SRC lisp
@@ -249,7 +249,7 @@ that look something like this:
 However, while each of the above will accept the right inputs, they
 all result in strings, which probably isn't what you want. That is
 ="true"= should probably result in =T=, ="false"= in =NIL=, and
-="null"= in.. hmm thats a tough one: perhaps a keyword called =:NULL=.
+="null"= in.. hmm that's a tough one: perhaps a keyword called =:NULL=.
 
 This is where =<<map= comes in.
 
@@ -307,7 +307,7 @@ T
 Hmm everything works, but the compiler isn't happy. It is reporting a
 warning that a variable is being defined but not used.  You could get
 rid of this by doing something like, for example =(declare (ignore
-null))=, for each of the above parser definitions, but it isnt
+null))=, for each of the above parser definitions, but it isn't
 necessary: =parzival= supplies a mapping variant called =<<map-to=.
 If you re-define the above parsers with =<<map-to=, the compiler warnings will go away:
 
@@ -325,7 +325,7 @@ a literal value upon success.
    
    Luckily, =parzival= includes to parsers that will get you most of
    the way to parsing JSON numbers. They are =<int<= and =<real<=,
-   which parse integers and floating point numbers respetively. What
+   which parse integers and floating point numbers respectively. What
    =<real<= does not do, however, is parse exponential components of
    number strings.  I.e. It will correctly accept ="-22.34"= but not
    ="-22.34E+33"=.  
@@ -443,13 +443,13 @@ PZ-JSON>
 #+END_SRC
 
 Enough palaver. Time for you to define your number parser. Looking
-back at the diagram in theh JSON definition document, you see that
-numbers are made up of upto four parts: a sign, a whole part, a
+back at the diagram in the JSON definition document, you see that
+numbers are made up of up to four parts: a sign, a whole part, a
 fractional part, and an exponent part.  For the first three parts you
 are in luck because =parzival= provides =<real<=.  So you need only
 concentrate on the exponential part.  That is a good place to start.
 
-The exponential part is a case insensative =#\e= followed by a an
+The exponential part is a case insensitive =#\e= followed by a an
 optional sign and then an integer.  
 
 #+BEGIN_SRC lisp 
@@ -555,7 +555,7 @@ parser will look something like:
 (<<char-brackets #\" (<<* <string-char<) \")
 #+END_SRC
 
-I.e. a seuence of zero or more valid characters, bracketed by
+I.e. a sequence of zero or more valid characters, bracketed by
 quotation marks. But that isn't quite right. The =<<*= combinator
 results in a list of matched values, so what you actually want is to
 map the result to a string:
@@ -664,11 +664,11 @@ PZ-JSON>
 #+END_SRC
 
 
-** Recrusive Parsers
+** Recursive Parsers
 
-You're in the home stretch. You've defined parsers for all fo the
-primtive value types, and now only the complex types remain.  And
-here's where you encounter a new and intersting challenge.
+You're in the home stretch. You've defined parsers for all of the
+primitive value types, and now only the complex types remain.  And
+here's where you encounter a new and interesting challenge.
 
 Looking at the JSON document, you notice two things. 
 
@@ -682,8 +682,8 @@ So, without having defined =<object<= or =<array<=, you can go and
 define =<value<=.
 
 #+BEGIN_SRC lisp
-  ;; not strictly necessry, define these to keep the compiler from
-  ;; complaining, and so that you can test thigns out in the REPL as you
+  ;; not strictly necessary, define these to keep the compiler from
+  ;; complaining, and so that you can test things out in the REPL as you
   ;; go.
   (<<def <array< <fail<)
   (<<def <object< <fail<)
@@ -753,9 +753,7 @@ PZ-JSON>
 ** Conclusion
 
 I hope you have had a good time learning about how this parser
-combinator library works.  It is a convenient define parsers to
-consume streams of text, spitting out values and calling functions
-during the parse.  
+combinator library works.  Go forth and parse!
 
 signing off.
 cbeo.
@@ -772,7 +770,7 @@ cbeo.
 (in-package :parzival-json)
 
 (<<def <ws<                    ; define parsers with <<def
-       (<<*                    ; zero or more, the Kleene star, reminiscient of regex
+       (<<*                    ; zero or more, the Kleene star, reminiscent of regex
          (<<or                 ; any of the the following
            (<<char #\Space)    ; parse exactly one character
            (<<char #\Linefeed)
