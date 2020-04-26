@@ -47,8 +47,8 @@
 
     Some of the terms used to talk about parsing can be perhaps
     confused or conflated with terms used to talk about
-    functions. This is especially so since, in =parzival=, a parser
-    *is* actually just a function.
+    functions. This is especially the case in =parzival= because a
+    parser *is* just a function.
 
     When parsing an input stream, the parser is said to "accept" the
     input when the parse "succeeds" with a "result".  Otherwise the
@@ -56,12 +56,12 @@
 
     I.e. On the one hand, you may be said to *call* a *function* with
     *arguments* so that it *returns* a value. On the other hand, a
-    *parser* will *accept* input and *result* in a value or it will
+    *parser* will *accept* *input* and either *result* in a value or
     *fail*.
 
     It may seem like nitpicking, but these terms are used frequently
     in =parzival='s documentation and in this tutorial.  It is my hope
-    that explicitly mentioning the terms here will make the tutorial
+    that explicit mention of the terms here will make the tutorial
     easier to read and understand.
 
 *** Naming Conventions 
