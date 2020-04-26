@@ -752,6 +752,60 @@ PZ-JSON>
 
 #+END_SRC
 
+Here is how you would parse somejson from a file:
+
+#+BEGIN_SRC lisp
+
+PZ-JSON> (with-open-file (file-input "examples/foo.json")
+           (let ((rp-stream (make-instance 'replay-streams:character-input-replay-stream
+                                           :source file-input)))
+             (parse rp-stream <value<))) 
+((("name" . "Boutade")
+  ("languages"
+   (("lang" . "Common Lisp") ("proficiency" . :NULL) ("lovesIt" . T))
+   (("lang" . "Rust") ("proficiency" . 0.8) ("lovesIt" . T)
+    ("isAshamedToLoveIt" . T))
+   (("lang" . "Haskell") ("proficiency" . 0.5)
+    ("lovesIt" . "sometimes, in some ways")))
+  ("pizzaOrder" "Tempeh Italian Sausage" "Spinach" "Mushrooms"
+   "Red Pepper Flakes")
+  ("isCool") ("isFunny") ("thinksPeopleAreLaughing" . T)
+  ("beHonest_thinksPeopleAreLaughing"))
+ (("name" . "Goofist")
+  ("languages"
+   (("lang" . "Common Lisp") ("proficiency" "over" 9000) ("lovesIt" . T))
+   (("lang" . "Rust") ("proficiency" . -1) ("lovesIt" . T)
+    ("isAshamedToLoveIt" . T))
+   (("lang" . "Haskell") ("proficiency" . -1)
+    ("lovesIt" . "i cannot tell a lie")))
+  ("pizzaOrder" "Blue Stilton" "Walnuts" "Pork Sausage" "Apple Slices")
+  ("isCool" . T) ("isFunny" . T) ("thinksPeopleAreLaughing" . T)
+  ("beHonest_thinksPeopleAreLaughing" . T)))
+T
+#<REPLAY-STREAMS:CHARACTER-INPUT-REPLAY-STREAM source-head: 1485, head: 1485>
+PZ-JSON> 
+
+#+END_SRC
+
+For the moment, parsers only work on instances of [[https://github.com/cbeo][replay-streams]]. If
+you pass raw text to the =parse= function for its =STREAM= argument,
+then you must also pass a =T= into its third optional argument
+position. Otherwise the stream is assumed to be a =replay-stream=.
+
+*** Problems to Puzzle Out
+
+1. Association Lists may or may not be the most appropriate data
+   structure for the representation of JSON objects. How could you
+   change the =<object<= definition to make something more
+   convenient. E.g. plists perhaps?
+
+2. As noted above, the =<number<= parser actually parses some numbers
+   that are not technically valid JSON values. Specifically, valid
+   JSON numbers may start with at most one =0=.  How would you change
+   =<number<= to correct for this?
+
+3. Perhaps Lists are not the right structure for JS arrays.  Maybe you
+   should change =<array<= to result in Common Lisp arrays?
 
 ** Conclusion
 
