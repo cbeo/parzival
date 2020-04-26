@@ -752,45 +752,47 @@ PZ-JSON>
 
 #+END_SRC
 
-Here is how you would parse somejson from a file:
+*** Parsing JSON Files
 
-#+BEGIN_SRC lisp
+ Here is how you would parse some JSON from a file:
 
-PZ-JSON> (with-open-file (file-input "examples/foo.json")
-           (let ((rp-stream (make-instance 'replay-streams:character-input-replay-stream
-                                           :source file-input)))
-             (parse rp-stream <value<))) 
-((("name" . "Boutade")
-  ("languages"
-   (("lang" . "Common Lisp") ("proficiency" . :NULL) ("lovesIt" . T))
-   (("lang" . "Rust") ("proficiency" . 0.8) ("lovesIt" . T)
-    ("isAshamedToLoveIt" . T))
-   (("lang" . "Haskell") ("proficiency" . 0.5)
-    ("lovesIt" . "sometimes, in some ways")))
-  ("pizzaOrder" "Tempeh Italian Sausage" "Spinach" "Mushrooms"
-   "Red Pepper Flakes")
-  ("isCool") ("isFunny") ("thinksPeopleAreLaughing" . T)
-  ("beHonest_thinksPeopleAreLaughing"))
- (("name" . "Goofist")
-  ("languages"
-   (("lang" . "Common Lisp") ("proficiency" "over" 9000) ("lovesIt" . T))
-   (("lang" . "Rust") ("proficiency" . -1) ("lovesIt" . T)
-    ("isAshamedToLoveIt" . T))
-   (("lang" . "Haskell") ("proficiency" . -1)
-    ("lovesIt" . "i cannot tell a lie")))
-  ("pizzaOrder" "Blue Stilton" "Walnuts" "Pork Sausage" "Apple Slices")
-  ("isCool" . T) ("isFunny" . T) ("thinksPeopleAreLaughing" . T)
-  ("beHonest_thinksPeopleAreLaughing" . T)))
-T
-#<REPLAY-STREAMS:CHARACTER-INPUT-REPLAY-STREAM source-head: 1485, head: 1485>
-PZ-JSON> 
+ #+BEGIN_SRC lisp
 
-#+END_SRC
+ PZ-JSON> (with-open-file (file-input "examples/foo.json")
+            (let ((rp-stream (make-instance 'replay-streams:character-input-replay-stream
+                                            :source file-input)))
+              (parse rp-stream <value<))) 
+ ((("name" . "Boutade")
+   ("languages"
+    (("lang" . "Common Lisp") ("proficiency" . :NULL) ("lovesIt" . T))
+    (("lang" . "Rust") ("proficiency" . 0.8) ("lovesIt" . T)
+     ("isAshamedToLoveIt" . T))
+    (("lang" . "Haskell") ("proficiency" . 0.5)
+     ("lovesIt" . "sometimes, in some ways")))
+   ("pizzaOrder" "Tempeh Italian Sausage" "Spinach" "Mushrooms"
+    "Red Pepper Flakes")
+   ("isCool") ("isFunny") ("thinksPeopleAreLaughing" . T)
+   ("beHonest_thinksPeopleAreLaughing"))
+  (("name" . "Goofist")
+   ("languages"
+    (("lang" . "Common Lisp") ("proficiency" "over" 9000) ("lovesIt" . T))
+    (("lang" . "Rust") ("proficiency" . -1) ("lovesIt" . T)
+     ("isAshamedToLoveIt" . T))
+    (("lang" . "Haskell") ("proficiency" . -1)
+     ("lovesIt" . "i cannot tell a lie")))
+   ("pizzaOrder" "Blue Stilton" "Walnuts" "Pork Sausage" "Apple Slices")
+   ("isCool" . T) ("isFunny" . T) ("thinksPeopleAreLaughing" . T)
+   ("beHonest_thinksPeopleAreLaughing" . T)))
+ T
+ #<REPLAY-STREAMS:CHARACTER-INPUT-REPLAY-STREAM source-head: 1485, head: 1485>
+ PZ-JSON> 
 
-For the moment, parsers only work on instances of [[https://github.com/cbeo][replay-streams]]. If
-you pass raw text to the =parse= function for its =STREAM= argument,
-then you must also pass a =T= into its third optional argument
-position. Otherwise the stream is assumed to be a =replay-stream=.
+ #+END_SRC
+
+ For the moment, parsers only work on instances of [[https://github.com/cbeo][replay-streams]]. If
+ you pass raw text to the =parse= function for its =STREAM= argument,
+ then you must also pass a =T= into its third optional argument
+ position. Otherwise the stream is assumed to be a =replay-stream=.
 
 *** Problems to Puzzle Out
 
