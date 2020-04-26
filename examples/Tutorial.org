@@ -220,10 +220,10 @@ T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1008A071C3}>
 #+END_SRC
 
-The parser =(<<string "hey")= accepted exactly the string ="hey"= from
-the input ="hey dude"= and resulted in the string ="hey"=.  
+The parser =(<<string "hey")= accepted exactly the string "hey" from
+the input "hey dude" and resulted in the string "hey".  
 
-Notice that if you try to accept the string ="dude"= from the same
+Notice that if you try to accept the string "dude" from the same
 initial input, the parse will fail:
 
 #+BEGIN_SRC lisp
@@ -234,7 +234,7 @@ NIL
 #+END_SRC
 
 The parse resulted in failure (indicated by a second return value of
-=NIL=) because, though ="dude"= appeared in the input, it was not at
+=NIL=) because, though "dude" appeared in the input, it was not at
 the beginning of the stream.
 
 At this point it seems clear that you will will want to define parsers
@@ -248,8 +248,8 @@ that look something like this:
 
 However, while each of the above will accept the right inputs, they
 all result in strings, which probably isn't what you want. That is
-="true"= should probably result in =T=, ="false"= in =NIL=, and
-="null"= in.. hmm that's a tough one: perhaps a keyword called =:NULL=.
+"true" should probably result in =T=, "false" in =NIL=, and
+"null" in.. hmm that's a tough one: perhaps a keyword called =:NULL=.
 
 This is where =<<map= comes in.
 
@@ -327,8 +327,8 @@ a literal value upon success.
    the way to parsing JSON numbers. They are =<int<= and =<real<=,
    which parse integers and floating point numbers respectively. What
    =<real<= does not do, however, is parse exponential components of
-   number strings.  I.e. It will correctly accept ="-22.34"= but not
-   ="-22.34E+33"=.  
+   number strings.  I.e. It will correctly accept "-22.34" but not
+   "-22.34E+33".  
 
    To get the rest of the way, you will need to make use of three new
    combinators: =<<bind=, =<<?=, and =<<and=. 
@@ -511,7 +511,7 @@ PZ-JSON>
 In the very last REPL example, you see that =<number<= is actually
 slightly wrong! The JSON definition only permits an initial =0= if the
 number has no whole part.  That is, a correctly implemented =<number<=
-should reject the string ="00001.443E+3"=.  I'll leave that as an
+should reject the string "00001.443E+3".  I'll leave that as an
 exercise to the reader ;) . 
 
 A short note. =<<let= is a stunningly convenient macro that uses
