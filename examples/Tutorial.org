@@ -1,5 +1,7 @@
+#+TITLE: The Goofism Guide to PARZIVAL
 
 Table Of Contents
+
  + [[The Goofism Guide to PARZIVAL][The Goofism Guide to PARZIVAL]]
    1. [[Concepts & Conventions][Concepts & Conventions]]
       - [[Parsers][Parsers]]
