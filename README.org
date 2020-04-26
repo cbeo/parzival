@@ -1,18 +1,14 @@
 
 * parzival
   
-  The quest of =parzival= is to make it fun and easy to build parsers that
-  consume streams and return common lisp values. E.g. A [[https://github.com/thegoofist/parzival/blob/master/examples/json-parzival.lisp][JSON]] parser or an HTTP
-  parser could both be written extremely succinctly in parzival.
+  The quest of =parzival= is to make it fun and easy to build parsers
+  that consume streams and return common lisp values. E.g. A [[https://github.com/cbeo/parzival/blob/master/examples/Tutorial.org][JSON]]
+  parser or can be written reasonbly succinctly in parzival.
 
-  In =parzival=, a *parser is a function* that accepts a *stream* and returns
-  three values:
+  Check out the [[https://github.com/cbeo/parzival/blob/master/examples/Tutorial.org][Tutorial]] for a detailed introduction.
+
   
-  1. A *parse result*, which is any value.
-  2. A *success indicator*, which is =t= or =nil=.
-  3. The possibly modified *stream* that was initially passed in.
-
-** A Neat Example
+** A Neat / Dumb Example
 
   What follows is a quick example of using =parzival= to build a parser for
   simple arithmetic expressions. But first, you should be aware of two
@@ -74,7 +70,7 @@ In the last example the string ="foozball"= does not represent a real
 number, and hence, the parse fails.  You can examine the third return
 value to see where in the input stream the parse failed.
 
-** An Extended Silly Example
+** An Extended Silly / Dumber Example
 
 The code for this example is a little long winded, so for the
 impatient I present below the grand payoff. 
