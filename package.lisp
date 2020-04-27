@@ -17,6 +17,8 @@
    #:<<char-equal
    #:<<cons
    #:<<cons-map
+   #:<<counting
+   #:<<counting+
    #:<<def
    #:<<ending
    #:<<filter
@@ -70,6 +72,7 @@
    #:<tab<
    #:<uppercase<
    #:<whitespace<
+   #:<whitespace+<
    #:<word<
    #:<~alphanum<
    #:<~digit<

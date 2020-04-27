@@ -12,7 +12,7 @@
                                     (make-string (* 2 count) :initial-element #\Space)
                                     toc-entry 
                                     toc-entry)))
-                        (<<and <whitespace<+ (<<+ <item<)))))
+                        (<<and <whitespace+< (<<+ <item<)))))
        "Accepts a valid Org Mode heading and results in an org mode
        list item with a link to that heading.")
 

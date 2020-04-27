@@ -425,6 +425,14 @@ the character C."
   (<<cons parser (<<* parser)))
 
 
+(defun <<counting (parser)
+  "runs PARSER zero or more times, resulting in the number of times PARSER succeeded."
+  (<<map #'length (<<* parser)))
+
+(defun <<counting+ (parser)
+  "Runs PARSER one or more times, resulting in the number of times PARSER succeeded."
+  (<<map #'length (<<+ parser)))
+
 (defun <<times (n parser)
   "Builds a parser that will run PARSER exactly N times, returning a list of the
   results."
@@ -505,6 +513,8 @@ the character C."
 (<<def <whitespace< (<<* (<<or <space< <newline< <return< <linefeed< <tab<))
        "Parses zero or more whitespace characters, returning them as a list")
 
+(<<def <whitespace+< (<<+ (<<or <space< <newline< <return< <linefeed< <tab<))
+       "Parsers at one or more whitespace characters, returning them as a list")
 
 (<<def <word< (<<to-string (<<+ <letter<))
         "Parses a sequence of one or more letters characters, resulting in
