@@ -1,5 +1,3 @@
-#+TITLE: The Goofism Guide to PARZIVAL
-
 *** Table Of Contents
 
   + [[#The Goofism Guide to PARZIVAL][The Goofism Guide to PARZIVAL]]
@@ -20,7 +18,7 @@
 
 
 * The Goofism Guide to PARZIVAL
-  
+
   _A Gentle Introduction_
 
   This tutorial will guide you through the process of creating a
@@ -54,8 +52,8 @@
 *** Parsers
 
     In =parzival= a parser is a function that accepts a character
-    stream and returns three values: 
-   
+    stream and returns three values:
+
     1. A result value, which can be anything.
     2. A success indicator, which is ~T~ if the parse succeeded, or
        ~NIL~ otherwise.
@@ -84,7 +82,7 @@
     that explicit mention of the terms here will make the tutorial
     easier to read and understand.
 
-*** Naming Conventions 
+*** Naming Conventions
 
     The =parzival= package exports a number of tragically un-lispy
     looking symbols. You'll see things like =<<bind= and =<alphanum<=
@@ -96,8 +94,8 @@
     above. The second are higher-order functions that operate on,
     transform, and create new parsers; i.e. the "combinators".
 
-    Parzival adopts two simple naming conventions.  
-    
+    Parzival adopts two simple naming conventions.
+
     1. Symbols that look like =<moo<= refer to parsers.
     2. Symbols that look like =<<moo= refer to combinators.
 
@@ -105,15 +103,15 @@
 
 #+BEGIN_SRC lisp
 
-(<<def <article< 
+(<<def <article<
        (<<plus (<<string "a") (<<string "the"))
  "A parser that accepts a lowercase English article.".)
 
 #+END_SRC
-   
+
    Without knowing the exact meaning of the above code, you can
    quickly see that =<article<= is a parser and it is defined using the
-   combinators =<<plus=, and =<<string=.  
+   combinators =<<plus=, and =<<string=.
 
    The =<<def= form is actually a macro that is used to define
    parsers.
@@ -123,11 +121,11 @@
    As of April 2020 =parzival= is not in quicklisp, hence you must
    manually install some things first.
 
-   If quicklisp is installed in your local home directory, do:   
+   If quicklisp is installed in your local home directory, do:
 
    : cd $HOME/quicklisp/local-projects
    : git clone https://github.com/cbeo/replay-streams
-   : git clone https://github.com/cbeo/parzival 
+   : git clone https://github.com/cbeo/parzival
 
    Now you should be able to fire up a lisp and do
 
@@ -177,21 +175,21 @@ PZ-JSON> (let ((string "   "))
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {100884A713}>
 
-PZ-JSON> (let ((string "   
+PZ-JSON> (let ((string "
          "))
            (parse string <ws< t))
 (#\  #\  #\  #\Newline #\  #\  #\  #\  #\  #\  #\  #\  #\ )
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {10088055F3}>
 
-PZ-JSON> 
+PZ-JSON>
 
-#+END_SRC   
+#+END_SRC
 
 So what is going on?  The combinators =<<char=, =<<or=, and =<<*= all
 create parsers.  The expression =(<<char #\Space)=, for example,
 creates a parser that accepts exactly one space character.  This
-parser also happens to result in exactly the space character.  
+parser also happens to result in exactly the space character.
 
 The =<<or= combinator is called on any number of parsers as arguments
 and returns a new parser.  The new parser will accept any of the
@@ -205,16 +203,16 @@ without a successful parse, the whole thing fails.
 Finally the =<<*= combinator is named for the [[https://en.wikipedia.org/wiki/Kleene_star][Kleene star]].  It takes a
 single parser as an argument and returns a parser that will,
 effectively, accept the same input zero or more times, resulting in a
-list of the results from the inner parser.  
+list of the results from the inner parser.
 
 If the above definition is perhaps more verbose than you would like,
 you could have instead used =<<any-char=, which takes a string as an
 argument and returns a parser that accepts any character in the
 string.
 
-#+BEGIN_SRC lisp 
+#+BEGIN_SRC lisp
 
-(<<def <ws< 
+(<<def <ws<
        (<<* (<<any-char (concatenate 'string '(#\Space #\Linefeed #\Return #\Tab)))))
 
 #+END_SRC
@@ -225,15 +223,15 @@ Before moving on to parsing numbers, it will be instructive to first
 write parsers for the JSON values =true=, =false=, and =null=.
 
 Here you will make use of the =<<string= and =<<map= combinators, both
-of which are used frequently.  
+of which are used frequently.
 
 The =<<string= combinator creates a parser that will accept exactly
 the string it was passed as its argument. Upon success, the defined
-parser will result in that very same string.  
+parser will result in that very same string.
 
 An example should make this clear:
 
-#+BEGIN_SRC lisp 
+#+BEGIN_SRC lisp
 PZ-JSON> (parse "hey dude" (<<string "hey") t)
 "hey"
 T
@@ -241,7 +239,7 @@ T
 #+END_SRC
 
 The parser =(<<string "hey")= accepted exactly the string "hey" from
-the input "hey dude" and resulted in the string "hey".  
+the input "hey dude" and resulted in the string "hey".
 
 Notice that if you try to accept the string "dude" from the same
 initial input, the parse will fail:
@@ -281,26 +279,26 @@ the value of =(funcall F R)=.
 If the above word salad is just too bonkers to be of use, an example
 should be much clearer:
 
-#+BEGIN_SRC lisp 
+#+BEGIN_SRC lisp
 PZ-JSON> (parse "hey dude" (<<map #'string-upcase (<<string "hey")) t)
 "HEY"
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1008C70623}>
-PZ-JSON> 
+PZ-JSON>
 #+END_SRC
 
 Ah! Much easier to understand. You just apply =#'string-upcase= to
-the result of =(<<string "hey")=. 
+the result of =(<<string "hey")=.
 
 Writing the parsers for booleans and null values should now be easy:
 
-#+BEGIN_SRC lisp 
+#+BEGIN_SRC lisp
 
 (<<def <true< (<<map (lambda (true) t) (<<string "true")))
 (<<def <false< (<<map (lambda (false) nil) (<<string "false")))
 (<<def <null< (<<map (lambda (null) :null) (<<string "null")))
 
-#+END_SRC 
+#+END_SRC
 
 Compiling the above and trying them out in the REPL you get, for example:
 
@@ -311,10 +309,10 @@ Compiling the above and trying them out in the REPL you get, for example:
 ;     (LAMBDA (NULL) :NULL)
 ; ==>
 ;   #'(LAMBDA (NULL) :NULL)
-; 
+;
 ; caught STYLE-WARNING:
 ;   The variable NULL is defined but never used.
-; 
+;
 ; compilation unit finished
 ;   caught 1 STYLE-WARNING condition
 PZ-JSON> (parse "null" <null< t)
@@ -342,27 +340,27 @@ from the input, just that a parser did indeed succeed.  You can return
 a literal value upon success.
 
 ** The Fundamental =<<bind=, Parsing Numbers
-   
+
    Luckily, =parzival= includes to parsers that will get you most of
    the way to parsing JSON numbers. They are =<int<= and =<real<=,
    which parse integers and floating point numbers respectively. What
    =<real<= does not do, however, is parse exponential components of
    number strings.  I.e. It will correctly accept "-22.34" but not
-   "-22.34E+33".  
+   "-22.34E+33".
 
    To get the rest of the way, you will need to make use of three new
-   combinators: =<<bind=, =<<?=, and =<<and=. 
+   combinators: =<<bind=, =<<?=, and =<<and=.
 
    First, =<<and= is analogous to Lisp's =and=, but works on parsers
    instead of values.  I.e. =(<<and <p1< <p2< ... <pn<)= will fail if
    any of its arguments fail, or will succeed if they all succeed,
-   resulting in the result of its last argument, =<pn<=. 
+   resulting in the result of its last argument, =<pn<=.
 
    Next, =<<?= is a combinator that makes an optional version of a
    parser. That is, a parser that will always succeed, even if it
-   accepts no input.  
+   accepts no input.
 
-   For example, in 
+   For example, in
 
    #+BEGIN_SRC lisp
 
@@ -374,8 +372,8 @@ PZ-JSON> (parse "abcd" (<<? (<<string "XXXab")) t)
 NIL
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1009079863}>
-PZ-JSON> 
-   
+PZ-JSON>
+
    #+END_SRC
 
    Both parses succeed, but the second one would have failed if it
@@ -391,11 +389,11 @@ PZ-JSON>
 
 #+BEGIN_SRC lisp
 
-PZ-JSON> (<<def <bind-test< 
+PZ-JSON> (<<def <bind-test<
            (let ((vars '(#\a 10 #\b 20 #\c 30)))                ; the parser closes over vars
              (<<bind (<<and (<<char #\?)  <item<)               ; <item< accepts any character
                      (lambda (var)                              ; the result is bound to var
-                       (let ((val (getf vars  var)))           
+                       (let ((val (getf vars  var)))
                          (if val                                ; either return a new parser
                              (<<map (lambda (num) (* val num))  ; that results in a number
                                     (<<and <whitespace< <int<))
@@ -410,9 +408,9 @@ PZ-JSON> (parse "?z 7" <bind-test< t)
 NIL
 NIL
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1009E3C3E3}>
-PZ-JSON> 
+PZ-JSON>
 
-#+END_SRC   
+#+END_SRC
 
    What is going on here?  The above example, while illustrative, is
    perhaps a bit hard to look at.  Stay strong - relief will soon be
@@ -424,11 +422,11 @@ PZ-JSON>
    =(<<bind PARSER FUNCTION)=
 
   Where =FUNCTION= is a function of one argument that is expected to
-  return a parser.  
+  return a parser.
 
-  So in the above, the parser you are binding is 
+  So in the above, the parser you are binding is
 
-  =(<<and (<<char #\?) <item<)= 
+  =(<<and (<<char #\?) <item<)=
 
   which parses any two character sequence that starts with a question
   mark, resulting in whatever character followed the question mark in
@@ -446,9 +444,9 @@ PZ-JSON>
   You could perhaps clarify the above definition with some
   intermediate parsers:
 
-#+BEGIN_SRC 
+#+BEGIN_SRC
 
-(<<def <bind-test< 
+(<<def <bind-test<
        (let* ((vars      '(#\a 10 #\b 20 #\c 30))
               (<var<     (<<and (<<char #\?) <item<))
               (<sep-int< (<<and <whitespace< <int<))
@@ -470,9 +468,9 @@ are in luck because =parzival= provides =<real<=.  So you need only
 concentrate on the exponential part.  That is a good place to start.
 
 The exponential part is a case insensitive =#\e= followed by a an
-optional sign symbole and then an integer.  
+optional sign symbole and then an integer.
 
-#+BEGIN_SRC lisp 
+#+BEGIN_SRC lisp
 
 (<<def <number-exp-part<
        (<<and (<<any-char "eE")
@@ -489,14 +487,14 @@ sign because it parses negative integers as well as positives.
 Next, you just use =<<bind= to use decide whether or not to scale the
 order of magnitude of an already parsed real number:
 
-#+BEGIN_SRC lisp 
+#+BEGIN_SRC lisp
 (<<def <number<
        (<<bind <real<
                (lambda (real)
                  (<<map (lambda (exp?)
                           (if exp? (* real (expt 10 exp?))
                               real))
-                        (<<? <number-exp-part<)))))  
+                        (<<? <number-exp-part<)))))
 #+END_SRC
 
 You can now test it out in the REPL:
@@ -524,7 +522,7 @@ PZ-JSON> (parse "00001.443E+3" <number< t)
 1443.0
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1007E29873}>
-PZ-JSON> 
+PZ-JSON>
 
 #+END_SRC
 
@@ -532,7 +530,7 @@ In the very last REPL example, you see that =<number<= is actually
 slightly wrong! The JSON definition only permits an initial =0= if the
 number has no whole part.  That is, a correctly implemented =<number<=
 should reject the string "00001.443E+3".  I'll leave that as an
-exercise to the reader ;) . 
+exercise to the reader ;) .
 
 A short note. =<<let= is a stunningly convenient macro that uses
 =<<bind= under the hood. Here is the above =<number<= parser defined
@@ -549,7 +547,7 @@ using =<<let=.
 
 =<<let= defines a parser by binding intermediate results to variables
 and then letting you make use of those bindings in an expression that
-returns a new parser. 
+returns a new parser.
 
 The =<<result= parser in the above accepts no input and results in its
 argument. E.g. =(<<result 10)= would succeed, having accepted no
@@ -575,7 +573,7 @@ parser will look something like:
 #+END_SRC
 
 I.e. a sequence of zero or more valid characters, bracketed by
-quotation marks. 
+quotation marks.
 
 The above is close, but it isn't quite right. The =<<*= combinator
 results in a *list* of matched values, but what you actually want is a
@@ -598,7 +596,7 @@ own. The only new combinators it uses are =<<plus=, =<<times=, and
 =<<sat=.
 
 The =<<plus= combinator is a two argument version of =<<or=. Actually
-=<<or= is defined in terms of =<<plus=.  
+=<<or= is defined in terms of =<<plus=.
 
 The =<<times= combinator takes a number =N= and a parser =P= and results
 in a list of exactly =N= results =P=.  E.g.
@@ -615,7 +613,7 @@ NIL
 #+END_SRC
 
 And the =<<sat= combinator accepts a single character, subject to a
-predicate. If the predicate returns =NIL=, the parser fails. 
+predicate. If the predicate returns =NIL=, the parser fails.
 
 So here is the code defining the =<string<= parser:
 
@@ -652,7 +650,7 @@ So here is the code defining the =<string<= parser:
   ;; a string-char is either an escaped char or any char that is neither
   ;; a quote nor a slash
    (<<def <string-char<
-          (<<plus <escaped-char< 
+          (<<plus <escaped-char<
                   (<<map #'list (<<sat (lambda (c) (not (member c '(#\" #\\))))))))
 
 
@@ -671,7 +669,7 @@ the REPL because you have to escape both the quotes and the the escapes:
 
 #+BEGIN_SRC lisp
 PZ-JSON> (parse "\"ab\\u6211cd moo \\n\"" <string< t)
-"ab我cd moo 
+"ab我cd moo
 "
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {100530E183}>
@@ -683,7 +681,7 @@ PZ-JSON> (parse "\"they call me Colin \\\"Parse Master\\\" Okay\"" <string< t)
 "they call me Colin \"Parse Master\" Okay"
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {10055BDF23}>
-PZ-JSON> 
+PZ-JSON>
 #+END_SRC
 
 
@@ -736,7 +734,7 @@ And finally, =<object<=.  An object is a sequence of zero or more
 =STRING : VALUE= pairs, separated by commas and whitespace, and
 bracketed by curly braces.  Again, pretty straightforward:
 
-#+BEGIN_SRC lisp 
+#+BEGIN_SRC lisp
 (<<def <object-pair<
        (<<let ((prop <string<)
                (value (<<and <ws<
@@ -761,14 +759,14 @@ PZ-JSON> (parse "{\"a\" : 10 , \"b\" : 3 }" <value< t)
 (("a" . 10) ("b" . 3))
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {100334FA63}>
-PZ-JSON> (parse "{ \"name\" : \"colin\", 
-\"hobbies\" : [\"lisp\"  , \"parsing\"  ]   , 
+PZ-JSON> (parse "{ \"name\" : \"colin\",
+\"hobbies\" : [\"lisp\"  , \"parsing\"  ]   ,
 \"features\" : { \"head\" : \"round\", \"eyes\" : 2} }" <value< t)
 (("name" . "colin") ("hobbies" "lisp" "parsing")
  ("features" ("head" . "round") ("eyes" . 2)))
 T
 #<REPLAY-STREAMS:STATIC-TEXT-REPLAY-STREAM {1003380733}>
-PZ-JSON> 
+PZ-JSON>
 
 #+END_SRC
 
@@ -781,7 +779,7 @@ PZ-JSON>
  PZ-JSON> (with-open-file (file-input "examples/foo.json")
             (let ((rp-stream (make-instance 'replay-streams:character-input-replay-stream
                                             :source file-input)))
-              (parse rp-stream <value<))) 
+              (parse rp-stream <value<)))
  ((("name" . "Boutade")
    ("languages"
     (("lang" . "Common Lisp") ("proficiency" . :NULL) ("lovesIt" . T))
@@ -805,7 +803,7 @@ PZ-JSON>
    ("beHonest_thinksPeopleAreLaughing" . T)))
  T
  #<REPLAY-STREAMS:CHARACTER-INPUT-REPLAY-STREAM source-head: 1485, head: 1485>
- PZ-JSON> 
+ PZ-JSON>
 
  #+END_SRC
 
@@ -894,7 +892,7 @@ cbeo.
 
 (<<def <string-char<
        ;; either an escaped char or any char that is neither a quote nor an escape
-       (<<plus <escaped-char< 
+       (<<plus <escaped-char<
                (<<map #'list (<<sat (lambda (c) (not (member c '(#\" #\\))))))))
 
 
