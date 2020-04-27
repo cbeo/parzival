@@ -1,22 +1,23 @@
 #+TITLE: The Goofism Guide to PARZIVAL
 
-Table Of Contents
+*** Table Of Contents
 
-  + [[The Goofism Guide to PARZIVAL][The Goofism Guide to PARZIVAL]]
-    1. [[Concepts & Conventions][Concepts & Conventions]]
-       - [[Parsers][Parsers]]
-       - [[On the Terms "Accept", "Succeed", "Fail" and "Result"][On the Terms "Accept", "Succeed", "Fail" and "Result"]]
-       - [[Naming Conventions ][Naming Conventions ]]
-    2. [[Getting Started (Finally)][Getting Started (Finally)]]
-    3. [[Jumping in with Whitespace][Jumping in with Whitespace]]
-    4. [[Mapping Results to =true=, =false=, and =null=][Mapping Results to =true=, =false=, and =null=]]
-    5. [[The Fundamental =<<bind=, Parsing Numbers][The Fundamental =<<bind=, Parsing Numbers]]
-    6. [[Bracketed Sequences with Strings][Bracketed Sequences with Strings]]
-    7. [[Recursive Parsers][Recursive Parsers]]
-       - [[Parsing JSON Files][Parsing JSON Files]]
-       - [[Problems to Puzzle Out][Problems to Puzzle Out]]
-    8. [[Conclusion][Conclusion]]
-       - [[code listing][code listing]]
+  + [[#The Goofism Guide to PARZIVAL][The Goofism Guide to PARZIVAL]]
+    1. [[#Concepts & Conventions][Concepts & Conventions]]
+       - [[#Parsers][Parsers]]
+       - [[#On the Terms "Accept", "Succeed", "Fail" and "Result"][On the Terms "Accept", "Succeed", "Fail" and "Result"]]
+       - [[#Naming Conventions ][Naming Conventions ]]
+    2. [[#Getting Started (Finally)][Getting Started (Finally)]]
+    3. [[#Jumping in with Whitespace][Jumping in with Whitespace]]
+    4. [[#Mapping Results to =true=, =false=, and =null=][Mapping Results to =true=, =false=, and =null=]]
+    5. [[#The Fundamental =<<bind=, Parsing Numbers][The Fundamental =<<bind=, Parsing Numbers]]
+    6. [[#Bracketed Sequences with Strings][Bracketed Sequences with Strings]]
+    7. [[#Recursive Parsers][Recursive Parsers]]
+       - [[#Parsing JSON Files][Parsing JSON Files]]
+       - [[#Problems to Puzzle Out][Problems to Puzzle Out]]
+    8. [[#Conclusion][Conclusion]]
+       - [[#code listing][code listing]]
+
 
 * The Goofism Guide to PARZIVAL
   
