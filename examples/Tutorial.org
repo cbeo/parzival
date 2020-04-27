@@ -1,3 +1,23 @@
+
+  Table of Contents
+
+  + [[#The Goofism Guide to PARZIVAL][The Goofism Guide to PARZIVAL]]
+    1. [[#Concepts & Conventions][Concepts & Conventions]]
+       - [[#Parsers][Parsers]]
+       - [[#On the Terms "Accept", "Succeed", "Fail" and "Result"][On the Terms "Accept", "Succeed", "Fail" and "Result"]]
+       - [[#Naming Conventions][Naming Conventions]]
+    2. [[#Getting Started (Finally)][Getting Started (Finally)]]
+    3. [[#Jumping in with Whitespace][Jumping in with Whitespace]]
+    4. [[#Mapping Results to true, false, and null][Mapping Results to true, false, and null]]
+    5. [[#The Fundamental <<bind, Parsing Numbers][The Fundamental <<bind, Parsing Numbers]]
+    6. [[#Bracketed Sequences with Strings][Bracketed Sequences with Strings]]
+    7. [[#Recursive Parsers][Recursive Parsers]]
+       - [[#Parsing JSON Files][Parsing JSON Files]]
+       - [[#Problems to Puzzle Out][Problems to Puzzle Out]]
+    8. [[#Conclusion][Conclusion]]
+       - [[#code listing][code listing]]
+
+
 * The Goofism Guide to PARZIVAL
 
   _A Gentle Introduction_
@@ -198,7 +218,7 @@ string.
 
 #+END_SRC
 
-** Mapping Results to =true=, =false=, and =null=
+** Mapping Results to true, false, and null
 
 Before moving on to parsing numbers, it will be instructive to first
 write parsers for the JSON values =true=, =false=, and =null=.
@@ -320,7 +340,7 @@ If you re-define the above parsers with =<<map-to=, the compiler warnings will g
 from the input, just that a parser did indeed succeed.  You can return
 a literal value upon success.
 
-** The Fundamental =<<bind=, Parsing Numbers
+** The Fundamental <<bind, Parsing Numbers
 
    Luckily, =parzival= includes to parsers that will get you most of
    the way to parsing JSON numbers. They are =<int<= and =<real<=,
