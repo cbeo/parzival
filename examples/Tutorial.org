@@ -375,11 +375,11 @@ PZ-JSON>
 
    #+END_SRC
 
-   Both parses succeed, but the second one would have failed if it
-   were not made optional using =<<?=.  An optional parser will
-   *rewind the stream*, leaving it the way it was before the parse was
-   attempted.  You will see further examples of stream rewinding
-   parsers below.
+   Both parses succeed, indicated by the =T= as the second return
+   value, but the second parse would have failed if it were not made
+   optional using =<<?=.  An optional parser will *rewind the stream*,
+   leaving it the way it was before the parse was attempted.  You will
+   see further examples of stream rewinding parsers below.
 
    Finally, =<<bind= is probably the most fundamental combinator in
    =parzival=. With =<<bind=, you can combine parsers together, making
@@ -466,25 +466,26 @@ fractional part, and an exponent part.  For the first three parts you
 are in luck because =parzival= provides =<real<=.  So you need only
 concentrate on the exponential part.  That is a good place to start.
 
-The exponential part is a case insensitive =#\e= followed by a an
-optional sign symbole and then an integer.
+The exponential part is a case insensitive character =#\e= followed by
+a an optional sign symbol and then an integer.
 
 #+BEGIN_SRC lisp
 
 (<<def <number-exp-part<
-       (<<and (<<any-char "eE")
-              (<<? (<<char #\+))
-              <int<))
+       (<<and (<<any-char "eE")    ; case insensitive #\e
+              (<<? (<<char #\+))   ; optional + sign
+              <int<))              ; an integer
 
 #+END_SRC
 
 You may be wondering why you only need to make the =#\+= character
-optional, and not the =#\-= sign too.  The reason is pretty
-unexciting: the =<int<= combinatory already optionally accepts a minus
-sign because it parses negative integers as well as positives.
+optional, and not include a parser for the the =#\-= sign too.  The
+reason is pretty unexciting: the =<int<= parser already
+optionally accepts a minus sign because it parses negative integers as
+well as positives.
 
-Next, you just use =<<bind= to use decide whether or not to scale the
-order of magnitude of an already parsed real number:
+Next, you use =<<bind= to decide whether or not to scale the order of
+magnitude of an already parsed real number:
 
 #+BEGIN_SRC lisp
 (<<def <number<
@@ -495,6 +496,15 @@ order of magnitude of an already parsed real number:
                               real))
                         (<<? <number-exp-part<)))))
 #+END_SRC
+
+The above parser does the following:
+
+1. Parses a real number with =<real<= 
+2. binds a successful result to the variable =real= inside the =lambda= expression.
+3. Optionally parses an exponential part using =(<<? <number-exp-part<)=
+4. binds the result of =<number-exp-part<= to the variable =exp?=,
+   which, if non-null, results in =real= scaled by =(expt 10
+   exp?)=.
 
 You can now test it out in the REPL:
 
