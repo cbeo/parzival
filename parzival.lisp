@@ -182,7 +182,12 @@ CONDITION is true, then the THEN parser is run, otherwise the ELSE parser is run
 
 (defun <<or (&rest parsers)
   "Tries each parser one after the other, rewinding the input stream after each
-   failure, and resulting in the first successful parse."
+   failure, and resulting in the first successful parse.
+
+   Hence, the order in which the parsers appear is significant. As a
+   general rule, you should list the most specific parsers first.
+
+   E.g. (<<string \"foobar\") is more specific than (<<string \"foo\")"
   (cond ((null parsers) <fail<)
         ((null (cdr parsers)) (car parsers))
         (t
