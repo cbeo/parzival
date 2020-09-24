@@ -15,6 +15,7 @@
    #:<<char
    #:<<char-brackets
    #:<<char-equal
+   #:<<conditionally
    #:<<cons
    #:<<cons-map
    #:<<counting

@@ -54,7 +54,7 @@ and the thrid value is the stream stream.  The stream will be left in
 whatever state it was in when the parse stopped, either successfully
 or not."
   `(progn
-     (defvar ,name ',name)
+     (defparameter ,name ',name)
      (defun ,name (stream) ,docstring (funcall ,parser stream))))
 
 
@@ -114,6 +114,15 @@ in then. If the parse fails the combinator else is run instead."
 (defmacro <<when ((var parser stream) form)
   "Binds the result of parser on stream to var and runs the form. Fails otherwise."
   `(<<if (,var ,parser ,stream) ,form <fail<))
+
+
+(defmacro <<conditionally (condition then else)
+  "Returns a parser that is sensative to the current state.  If
+CONDITION is true, then the THEN parser is run, otherwise the ELSE parser is run."
+  `(lambda (stream)
+     (if ,condition
+         (funcall ,then stream)
+         (funcall ,else stream))))
 
 
 ;;; The <<PLUS COMBINATOR is vital, and gives us amazing powers to choose our
